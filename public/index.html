@@ -157,6 +157,17 @@ const EMAIL_FROM = "info@gissa.com.au"; // must be a verified sender
 const MASTER_FILE_URL  = "A-SPEC CODELISTS Version 2.0.8 MASTER WIP - 20260511.xlsx";
 const MASTER_FILE_NAME = "A-SPEC CODELISTS Version 2.0.8 MASTER WIP - 20260511.xlsx";
 
+/* Parses the version from MASTER_FILE_NAME and returns the next patch version.
+ * e.g. "...Version 2.0.8 MASTER..." → "2.0.9"
+ *      "...Version 2.0.10 MASTER..." → "2.0.11"
+ * Falls back to "2.0.1" if no version is found. */
+function getNextVersion() {
+  const match = MASTER_FILE_NAME.match(/Version\s+(\d+)\.(\d+)\.(\d+)/i);
+  if (!match) return '2.0.1';
+  const [, major, minor, patch] = match;
+  return `${major}.${minor}.${parseInt(patch, 10) + 1}`;
+}
+
 /* -------------------- Utils -------------------- */
 function isValidEmail(s){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s); }
 function pick(obj, ...keys){
@@ -1222,7 +1233,7 @@ If required communicate with the proposer of the new code to address any issues.
 ---
 Please Note: This is an automated notification from the A-SPEC Codelists Dashboard.`;
 
-  const filename = `A-SPEC New Codes for Review - ${iso}.xlsx`;
+  const filename = `A-SPEC CODELISTS Version ${getNextVersion()} MASTER WIP - ${iso}.xlsx`;
   showEmailPreview(subject, body, updatedExcelBlob, filename, arr, {
   userName,
   userEmail: lastUserEmail,
@@ -1235,16 +1246,7 @@ function getTotalTermsCount(){
   return codelists.reduce((t,c)=>t+c.codes.length,0);
 }
 
-/* ── Excel generation ────────────────────────────────────────────────────
- *  Produces a NEW-RECORDS-ONLY xlsx for GISSA review containing:
- *  - Only the codes added this session (sessionChanges)
- *  - "Current Versions 2019 & 2023" dropdown (2019 / 2023 / both)
- *  - "Spec_Coverage" dropdown (DDS_EXISTING / DDS / EXISTING)
- *  - "Authorised by (whom yyyy/mm/dd)" free-text column at the end
- *
- *  SheetJS 0.18.5 community does not support dataValidation natively,
- *  so we inject the validation XML directly into the xlsx zip using JSZip.
- * ─────────────────────────────────────────────────────────────────────── */
+/* -------------------- Export (Excel — new records only) -------------------- */
 async function generateUpdatedExcelFile(){
   try {
     const wb = XLSX.utils.book_new();
@@ -1264,81 +1266,66 @@ async function generateUpdatedExcelFile(){
       "Authorised by (whom yyyy/mm/dd)"
     ];
 
-    // ── New records only (from sessionChanges) ──
+    // New records only — one row per sessionChange, NOT the full master codelist
     const newRows = sessionChanges.map(ch => {
-      const ref   = ch.entryRef || {};
+      const ref = ch.entryRef || {};
       const dateOut = normalizeDate(pick(ref,'Date_Modified','DATE_MODIFIED') || ch.timestamp || '');
       return {
-        "Spec":                                  pick(ref,'Spec','SPEC') || '',
-        "Current Versions 2019 & 2023":          '',   // blank — GISSA selects via dropdown
-        "Spec_Coverage":                         '',   // blank — GISSA selects via dropdown
-        "Codelist_Name":                         ch.codelist || '',
-        "Code_Value":                            ch.code || '',
-        "Description":                           ch.description || '',
-        "Comment":                               ch.comments || pick(ref,'Comment','COMMENT','comment') || '',
-        "Date_Modified":                         dateOut,
-        "Added - A, Modified - M, Removed - R":  'A',
-        "Change_Author":                         ch.addedBy || '',
-        "Organisation":                          ch.organisation || '',
-        "Authorised by (whom yyyy/mm/dd)":       ''    // blank — GISSA fills manually
+        "Spec":                                 pick(ref,'Spec','SPEC') || '',
+        "Current Versions 2019 & 2023":         '',  // GISSA selects from dropdown
+        "Spec_Coverage":                        '',  // GISSA selects from dropdown
+        "Codelist_Name":                        ch.codelist || '',
+        "Code_Value":                           ch.code || '',
+        "Description":                          ch.description || '',
+        "Comment":                              ch.comments || pick(ref,'Comment','COMMENT','comment') || '',
+        "Date_Modified":                        dateOut,
+        "Added - A, Modified - M, Removed - R": 'A',
+        "Change_Author":                        ch.addedBy || '',
+        "Organisation":                         ch.organisation || '',
+        "Authorised by (whom yyyy/mm/dd)":      ''   // GISSA fills manually
       };
     });
 
     const ws = XLSX.utils.json_to_sheet(newRows, { header: columns });
 
-    // ── Column widths ──
     ws['!cols'] = [
-      { wch: 8  },  // Spec
-      { wch: 20 },  // Current Versions
-      { wch: 16 },  // Spec_Coverage
-      { wch: 30 },  // Codelist_Name
-      { wch: 14 },  // Code_Value
-      { wch: 40 },  // Description
-      { wch: 30 },  // Comment
-      { wch: 14 },  // Date_Modified
-      { wch: 10 },  // A/M/R
-      { wch: 20 },  // Change_Author
-      { wch: 24 },  // Organisation
-      { wch: 28 },  // Authorised by
+      { wch: 8  }, { wch: 22 }, { wch: 16 }, { wch: 30 },
+      { wch: 14 }, { wch: 40 }, { wch: 30 }, { wch: 14 },
+      { wch: 10 }, { wch: 20 }, { wch: 24 }, { wch: 30 }
     ];
 
     XLSX.utils.book_append_sheet(wb, ws, "NEW_CODES");
 
-    // ── Write to array buffer ──
-    const buf  = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
 
-    // ── Inject dataValidation XML via JSZip ──
-    // SheetJS community doesn't write dataValidation, so we open the zip,
-    // patch the sheet XML, and repack.
+    // Inject dropdown dataValidation via JSZip
+    // (SheetJS community 0.18.5 does not support dataValidation natively)
     if (typeof JSZip === 'undefined') {
-      console.warn('JSZip not loaded — dropdowns will not appear in xlsx');
-      return blob;
+      console.warn('JSZip not loaded — xlsx generated without dropdowns');
+      return new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     }
 
     const zip      = await JSZip.loadAsync(buf);
     const sheetXml = await zip.file('xl/worksheets/sheet1.xml').async('string');
-
-    // How many data rows do we have? (header row = row 1, data starts row 2)
     const lastRow  = Math.max(newRows.length + 1, 2);
-    const dataRange = `2:${lastRow + 50}`; // extend range so it works for future rows too
+    const rowRange = `2:${lastRow + 100}`;
 
-    // Col B = "Current Versions 2019 & 2023"  →  2019, 2023, both
-    // Col C = "Spec_Coverage"                 →  DDS_EXISTING, DDS, EXISTING
-    const validationXml = `<dataValidations count="2">` +
-      `<dataValidation type="list" allowBlank="1" showInputMessage="1" showErrorMessage="1" sqref="B${dataRange}">` +
-        `<formula1>"2019,2023,both"</formula1>` +
-      `</dataValidation>` +
-      `<dataValidation type="list" allowBlank="1" showInputMessage="1" showErrorMessage="1" sqref="C${dataRange}">` +
-        `<formula1>"DDS_EXISTING,DDS,EXISTING"</formula1>` +
-      `</dataValidation>` +
-    `</dataValidations>`;
+    // Col B → "Current Versions 2019 & 2023" : 2019 / 2023 / both
+    // Col C → "Spec_Coverage"                : DDS_EXISTING / DDS / EXISTING
+    const validationXml =
+      `<dataValidations count="2">` +
+        `<dataValidation type="list" allowBlank="1" showInputMessage="1" showErrorMessage="1" sqref="B${rowRange}">` +
+          `<formula1>"2019,2023,both"</formula1>` +
+        `</dataValidation>` +
+        `<dataValidation type="list" allowBlank="1" showInputMessage="1" showErrorMessage="1" sqref="C${rowRange}">` +
+          `<formula1>"DDS_EXISTING,DDS,EXISTING"</formula1>` +
+        `</dataValidation>` +
+      `</dataValidations>`;
 
-    // Insert just before </worksheet>
-    const patchedXml = sheetXml.replace('</worksheet>', validationXml + '</worksheet>');
-    zip.file('xl/worksheets/sheet1.xml', patchedXml);
+    const patched = sheetXml.replace('</worksheet>', validationXml + '</worksheet>');
+    zip.file('xl/worksheets/sheet1.xml', patched);
 
-    const patchedBuf  = await zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' });
+    const patchedBuf = await zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' });
     return new Blob([patchedBuf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 
   } catch(e) {
@@ -1479,12 +1466,12 @@ function resetSession(deep=false){
 /* -------------------- Search across all codelists -------------------- */
 
 /* ── Fuzzy search helpers ──────────────────────────────────────────────────
- *  Used only in Tier 4 (typo / close-match fallback).
- *  Four rules prevent false positives (tested against 3,964 real codes):
- *  1. Substring shortcut only when BOTH strings ≥ 4 chars
+ *  Tested against 3,964 real A-SPEC codes.
+ *  Rules preventing false positives:
+ *  1. Substring shortcut only for single-word queries (multi-word must use token overlap)
  *  2. Token prefix-match only when BOTH tokens ≥ 3 chars
  *  3. Stopwords filtered before tokenisation
- *  4. Multi-word queries (>3 tokens) skip character edit-distance
+ *  4. Multi-word queries skip character edit-distance entirely
  * ─────────────────────────────────────────────────────────────────────── */
 function levenshtein(a, b) {
   const m = a.length, n = b.length;
@@ -1492,9 +1479,7 @@ function levenshtein(a, b) {
   for (let j = 0; j <= n; j++) dp[0][j] = j;
   for (let i = 1; i <= m; i++)
     for (let j = 1; j <= n; j++)
-      dp[i][j] = a[i-1] === b[j-1]
-        ? dp[i-1][j-1]
-        : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+      dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
   return dp[m][n];
 }
 function fuzzyStem(w) {
@@ -1511,31 +1496,20 @@ const FUZZY_THRESHOLD = 0.60;
 function fuzzyScore(query, target) {
   const q = query.toLowerCase().trim(), t = target.toLowerCase().trim();
   if (!q || !t) return 0;
-
   const qt = fuzzyTok(q);
   const isMultiWord = qt.length > 1;
-
-  // Substring shortcut — single-word queries only.
-  // Multi-word queries must go through token overlap so ranking is meaningful:
-  // "vegetable plantings" must rank VEGETPLANT above PLANT, which substring
-  // can't do (both contain "plant"). Token overlap correctly scores 2 hits vs 1.
+  // Substring only for single-word queries — multi-word must rank by token overlap
   if (!isMultiWord && q.length >= 4 && t.length >= 4 && (t.includes(q) || q.includes(t))) return 0.95;
-
   const tt = fuzzyTok(t);
   if (qt.length && tt.length) {
     let hits = 0;
     qt.forEach(a => { if (tt.some(b => b===a || (a.length>=3&&b.length>=3&&(b.startsWith(a)||a.startsWith(b))))) hits++; });
-    // Use harmonic-mean of query-coverage and target-coverage so BOTH sides
-    // need to match well — rewards VEGETPLANT (2/2 query words hit) over
-    // PLANT (1/2 query words hit) when user types "vegetable plantings"
     const qCov = hits / qt.length;
     const tCov = hits / Math.max(tt.length, 1);
     const ts   = (2 * qCov * tCov) / (qCov + tCov + 1e-9);
     if (ts >= 0.40) return 0.55 + ts * 0.40;
-    if (isMultiWord) return 0; // multi-word query, no token match → skip edit distance
+    if (isMultiWord) return 0;
   }
-
-  // Character edit distance — single-word queries only
   const ml = Math.max(q.length, t.length);
   if (!ml) return 0;
   const es = 1 - levenshtein(q, t) / ml;
@@ -1544,44 +1518,25 @@ function fuzzyScore(query, target) {
   return Math.max(es, bte * 0.85);
 }
 
-/* ── Match-reason pill ─────────────────────────────────────────────────── */
 function matchPill(label, bg, color) {
   return `<span style="display:inline-block;padding:.15rem .5rem;border-radius:4px;font-size:.75rem;font-weight:600;background:${bg};color:${color};margin-bottom:.4rem;letter-spacing:.02em;">${label}</span>`;
 }
 
-/* ── Main search handler ───────────────────────────────────────────────── *
- *
- *  TIER 1 — Code starts with query  (any length ≥ 1)
- *    1a. Exact full match  → blue "CODE MATCH" pill, blue banner
- *    1b. Code starts with  → blue "CODE MATCH" pill, same section
- *
- *  TIER 2 — Description starts with query  (query ≥ 3 chars only)
- *    Shows codes whose description begins with the typed text.
- *    Separate section below Tier 1 results.
- *
- *  TIER 3 — Description contains query  (query ≥ 3 chars only)
- *    Shows codes whose description contains the text anywhere.
- *    Only codes not already shown in Tier 2.
- *
- *  TIER 4 — Fuzzy / close match  (query ≥ 4 chars, no results above)
- *    Typo tolerance and stemming. Only fires when Tiers 1–3 are all empty.
- *
- *  TIER 5 — Nothing found → encourage creation
- *
- *  Rationale: users think in terms of codes first (George), then
- *  descriptions (community users who type "vegetable"). Description
- *  search only starts at 3 chars to avoid noise from "ve", "re" etc.
+/* ── Search handler — 5 tiers, code-first ─────────────────────────────────
+ *  Tier 1a  Exact code match        (any length)
+ *  Tier 1b  Code starts with query  (any length, sorted A-Z)
+ *  Tier 2   Desc starts with query  (query ≥ 3 chars, shown below code results)
+ *  Tier 3   Desc contains query     (query ≥ 3 chars, shown below tier 2)
+ *  Tier 4   Fuzzy / close match     (query ≥ 4 chars, only when 1-3 empty)
+ *  Tier 5   Nothing found → encourage creation
  * ──────────────────────────────────────────────────────────────────────── */
 function handleCodeSearch(e){
-  const raw     = e.target.value.trim();
-  const qu      = raw.toUpperCase();
-  const ql      = raw.toLowerCase();
+  const raw = e.target.value.trim();
+  const qu  = raw.toUpperCase();
+  const ql  = raw.toLowerCase();
   const results = document.getElementById('search-results');
-
-  // Clear results for very short input
   if (raw.length < 1) { results.innerHTML = ''; return; }
 
-  /* ── Shared card builder ──────────────────────────────────────────── */
   function buildCard(item, pill, borderColor, pickerId) {
     const ec = item.code.replace(/'/g,"\\'");
     const ed = item.description.replace(/'/g,"\\'");
@@ -1593,9 +1548,7 @@ function handleCodeSearch(e){
     const actionHtml = `
       <div style="margin-top:.5rem;display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;">
         <span style="font-size:.85rem;color:#4a5568;">From: <b>${item.codelistName}</b></span>
-        ${alreadyInTarget
-          ? `<span style="font-size:.85rem;color:#276749;background:#f0fff4;padding:.2rem .5rem;border-radius:4px;border:1px solid #9ae6b4;">✓ Already in this codelist</span>`
-          : ''}
+        ${alreadyInTarget ? `<span style="font-size:.85rem;color:#276749;background:#f0fff4;padding:.2rem .5rem;border-radius:4px;border:1px solid #9ae6b4;">✓ Already in this codelist</span>` : ''}
         <button onclick="showCopyPicker('${pickerId}','${ec}','${ed}','${es}','${ef}')"
           style="padding:.3rem .85rem;background:#667eea;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:.85rem;">
           📋 Copy to Codelist
@@ -1612,8 +1565,6 @@ function handleCodeSearch(e){
       </div>`;
   }
 
-  /* ── Collect all four tiers ───────────────────────────────────────── */
-
   // Tier 1a: exact full code match
   const exactItems = [];
   const seenExact = new Set();
@@ -1622,18 +1573,14 @@ function handleCodeSearch(e){
       const cv = pick(row,'Code_Value','CODE_Value','CODE_VALUE','Code','CODE');
       if (cv.toUpperCase() === qu && !seenExact.has(cv.toUpperCase())) {
         seenExact.add(cv.toUpperCase());
-        exactItems.push({
-          codelistName: cl.name,
-          code: cv,
-          description: pick(row,'Description','DESCRIPTION') || '',
-          comment: pick(row,'Comment','COMMENT','comment') || '',
-          spec: pick(row,'Spec','SPEC') || ''
-        });
+        exactItems.push({ codelistName:cl.name, code:cv,
+          description:pick(row,'Description','DESCRIPTION')||'',
+          comment:pick(row,'Comment','COMMENT','comment')||'', spec:pick(row,'Spec','SPEC')||'' });
       }
     });
   });
 
-  // Tier 1b: code starts with query (not already in exact)
+  // Tier 1b: code starts with query
   const startsItems = [];
   const seenStarts = new Set([...seenExact]);
   codelists.forEach(cl => {
@@ -1641,20 +1588,15 @@ function handleCodeSearch(e){
       const cv = pick(row,'Code_Value','CODE_Value','CODE_VALUE','Code','CODE');
       if (cv.toUpperCase().startsWith(qu) && !seenStarts.has(cv.toUpperCase())) {
         seenStarts.add(cv.toUpperCase());
-        startsItems.push({
-          codelistName: cl.name,
-          code: cv,
-          description: pick(row,'Description','DESCRIPTION') || '',
-          comment: pick(row,'Comment','COMMENT','comment') || '',
-          spec: pick(row,'Spec','SPEC') || ''
-        });
+        startsItems.push({ codelistName:cl.name, code:cv,
+          description:pick(row,'Description','DESCRIPTION')||'',
+          comment:pick(row,'Comment','COMMENT','comment')||'', spec:pick(row,'Spec','SPEC')||'' });
       }
     });
   });
-  // Sort alphabetically so user sees VEG before VEGETPLANT before VEHICLE
   startsItems.sort((a, b) => a.code.localeCompare(b.code));
 
-  // Tier 2 & 3: description matches — only when query ≥ 3 chars
+  // Tier 2 & 3: description matches (query ≥ 3 chars only)
   const descStartsItems = [], descContainsItems = [];
   const seenDesc = new Set([...seenStarts]);
   if (raw.length >= 3) {
@@ -1665,8 +1607,8 @@ function handleCodeSearch(e){
         if (seenDesc.has(cv.toUpperCase())) return;
         if (desc.toLowerCase().startsWith(ql)) {
           seenDesc.add(cv.toUpperCase());
-          descStartsItems.push({ codelistName: cl.name, code: cv, description: desc,
-            comment: pick(row,'Comment','COMMENT','comment')||'', spec: pick(row,'Spec','SPEC')||'' });
+          descStartsItems.push({ codelistName:cl.name, code:cv, description:desc,
+            comment:pick(row,'Comment','COMMENT','comment')||'', spec:pick(row,'Spec','SPEC')||'' });
         }
       });
     });
@@ -1678,8 +1620,8 @@ function handleCodeSearch(e){
         if (seenContains.has(cv.toUpperCase())) return;
         if (desc.toLowerCase().includes(ql)) {
           seenContains.add(cv.toUpperCase());
-          descContainsItems.push({ codelistName: cl.name, code: cv, description: desc,
-            comment: pick(row,'Comment','COMMENT','comment')||'', spec: pick(row,'Spec','SPEC')||'' });
+          descContainsItems.push({ codelistName:cl.name, code:cv, description:desc,
+            comment:pick(row,'Comment','COMMENT','comment')||'', spec:pick(row,'Spec','SPEC')||'' });
         }
       });
     });
@@ -1688,51 +1630,39 @@ function handleCodeSearch(e){
   const hasCodeResults = exactItems.length > 0 || startsItems.length > 0;
   const hasDescResults = descStartsItems.length > 0 || descContainsItems.length > 0;
 
-  /* ── Render: Tier 1 (code matches) ───────────────────────────────── */
+  // Render Tier 1 (code matches)
   if (hasCodeResults) {
-    const pillExact  = matchPill('EXACT CODE', '#dbeafe', '#1e40af');
-    const pillStarts = matchPill('CODE MATCH', '#dbeafe', '#1e40af');
-    const allCodeCards = [
-      ...exactItems.map((item, i) => buildCard(item, pillExact,  '#3b82f6', `picker-exact-${i}`)),
-      ...startsItems.map((item, i) => buildCard(item, pillStarts, '#3b82f6', `picker-starts-${i}`))
-    ];
-
-    const bannerMsg = exactItems.length > 0
-      ? `ℹ️ <b>${raw.toUpperCase()}</b> exists as a code — you can copy it to your codelist, or keep typing to narrow further.`
-      : `🔤 Found ${startsItems.length} code${startsItems.length!==1?'s':''} starting with <b>"${raw.toUpperCase()}"</b> — copy one to your codelist or keep typing.`;
-
+    const pillExact  = matchPill('EXACT CODE',  '#dbeafe', '#1e40af');
+    const pillStarts = matchPill('CODE MATCH',  '#dbeafe', '#1e40af');
+    const bannerMsg  = exactItems.length > 0
+      ? `ℹ️ <b>${raw.toUpperCase()}</b> exists as a code — copy it to your codelist, or keep typing.`
+      : `🔤 Found ${startsItems.length} code${startsItems.length!==1?'s':''} starting with <b>"${raw.toUpperCase()}"</b> — copy one or keep typing.`;
     let html = `
       <div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:8px;padding:.85rem 1rem;margin-bottom:.75rem;">
         <p style="color:#1e40af;font-size:.92rem;margin:0;">${bannerMsg}</p>
       </div>
       <div style="max-height:360px;overflow-y:auto;">
-        ${allCodeCards.join('')}
+        ${exactItems.map((item,i) => buildCard(item, pillExact,  '#3b82f6', `picker-exact-${i}`)).join('')}
+        ${startsItems.map((item,i) => buildCard(item, pillStarts, '#3b82f6', `picker-starts-${i}`)).join('')}
       </div>`;
-
-    // Append description results below if query ≥ 3 chars
     if (hasDescResults) {
-      const shownDS = descStartsItems.slice(0, 5);
-      const shownDC = descContainsItems.slice(0, 10);
-      const pillDS  = matchPill('DESCRIPTION MATCH', '#dcfce7', '#166534');
-      const pillDC  = matchPill('DESCRIPTION MATCH', '#dcfce7', '#166534');
+      const pillD = matchPill('DESCRIPTION MATCH', '#dcfce7', '#166534');
       html += `
         <div style="margin-top:1rem;padding-top:.75rem;border-top:2px dashed #e2e8f0;">
           <p style="font-size:.82rem;color:#718096;margin-bottom:.5rem;">Also found in descriptions:</p>
-          ${shownDS.map((item,i) => buildCard(item, pillDS, '#22c55e', `picker-ds-${i}`)).join('')}
-          ${shownDC.map((item,i) => buildCard(item, pillDC, '#22c55e', `picker-dc-${i}`)).join('')}
+          ${descStartsItems.slice(0,5).map((item,i)  => buildCard(item, pillD, '#22c55e', `picker-ds-${i}`)).join('')}
+          ${descContainsItems.slice(0,10).map((item,i) => buildCard(item, pillD, '#22c55e', `picker-dc-${i}`)).join('')}
         </div>`;
     }
-
     results.innerHTML = html;
     return;
   }
 
-  /* ── Render: Tier 2+3 only (no code match, description matches) ───── */
+  // Render Tier 2+3 only
   if (hasDescResults) {
+    const pillD  = matchPill('DESCRIPTION MATCH', '#dcfce7', '#166534');
     const shownDS = descStartsItems.slice(0, 10);
     const shownDC = descContainsItems.slice(0, 10);
-    const pillDS  = matchPill('DESCRIPTION MATCH', '#dcfce7', '#166534');
-    const pillDC  = matchPill('DESCRIPTION MATCH', '#dcfce7', '#166534');
     const total   = shownDS.length + shownDC.length;
     results.innerHTML = `
       <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:.85rem 1rem;margin-bottom:.75rem;">
@@ -1740,13 +1670,13 @@ function handleCodeSearch(e){
         <p style="font-size:.88rem;color:#15803d;margin:0;">These codes have descriptions matching your search. Copy one, or scroll down to create a brand new code.</p>
       </div>
       <div style="max-height:400px;overflow-y:auto;">
-        ${shownDS.map((item,i) => buildCard(item, pillDS, '#22c55e', `picker-ds2-${i}`)).join('')}
-        ${shownDC.map((item,i) => buildCard(item, pillDC, '#22c55e', `picker-dc2-${i}`)).join('')}
+        ${shownDS.map((item,i) => buildCard(item, pillD, '#22c55e', `picker-ds2-${i}`)).join('')}
+        ${shownDC.map((item,i) => buildCard(item, pillD, '#22c55e', `picker-dc2-${i}`)).join('')}
       </div>`;
     return;
   }
 
-  /* ── Tier 4: Fuzzy — only when query ≥ 4 chars, nothing found above ─ */
+  // Tier 4: Fuzzy (query ≥ 4 chars, nothing found above)
   if (raw.length >= 4) {
     const fuzzyItems = [];
     const seenFuzzy  = new Set();
@@ -1755,19 +1685,18 @@ function handleCodeSearch(e){
         const cv   = pick(row,'Code_Value','CODE_Value','CODE_VALUE','Code','CODE');
         const desc = pick(row,'Description','DESCRIPTION') || '';
         if (!cv || seenFuzzy.has(cv.toUpperCase())) return;
-        const sDesc = desc.length > 3    ? fuzzyScore(raw, desc) : 0;
-        const sCode = cv.length   >= 3   ? fuzzyScore(raw, cv)   : 0;
+        const sDesc = desc.length > 3   ? fuzzyScore(raw, desc) : 0;
+        const sCode = cv.length   >= 3  ? fuzzyScore(raw, cv)   : 0;
         const best  = Math.max(sDesc, sCode);
         if (best >= FUZZY_THRESHOLD) {
           seenFuzzy.add(cv.toUpperCase());
-          fuzzyItems.push({ codelistName: cl.name, code: cv, description: desc,
-            comment: pick(row,'Comment','COMMENT','comment')||'', spec: pick(row,'Spec','SPEC')||'', score: best });
+          fuzzyItems.push({ codelistName:cl.name, code:cv, description:desc,
+            comment:pick(row,'Comment','COMMENT','comment')||'', spec:pick(row,'Spec','SPEC')||'', score:best });
         }
       });
     });
-    fuzzyItems.sort((a, b) => b.score - a.score);
+    fuzzyItems.sort((a,b) => b.score - a.score);
     const topFuzzy = fuzzyItems.slice(0, 8);
-
     if (topFuzzy.length > 0) {
       const escaped2 = raw.replace(/'/g,"\\'");
       const pill = matchPill('CLOSE MATCH', '#fef9c3', '#854d0e');
@@ -1790,7 +1719,7 @@ function handleCodeSearch(e){
     }
   }
 
-  /* ── Tier 5: Nothing at all — encourage creation ─────────────────── */
+  // Tier 5: Nothing at all
   const escaped = raw.replace(/'/g,"\\'");
   results.innerHTML = `
     <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:1rem;">
