@@ -1306,24 +1306,33 @@ async function generateUpdatedExcelFile(){
     }
 
     const zip      = await JSZip.loadAsync(buf);
-    const sheetXml = await zip.file('xl/worksheets/sheet1.xml').async('string');
-    const lastRow  = Math.max(newRows.length + 1, 2);
-    const rowRange = `2:${lastRow + 100}`;
+    let sheetXml   = await zip.file('xl/worksheets/sheet1.xml').async('string');
 
     // Col B → "Current Versions 2019 & 2023" : 2019 / 2023 / both
     // Col C → "Spec_Coverage"                : DDS_EXISTING / DDS / EXISTING
+    //
+    // IMPORTANT: The OOXML schema requires <dataValidations> to appear BEFORE
+    // <ignoredErrors> (which SheetJS always emits). Inserting before </worksheet>
+    // places it after <ignoredErrors> which corrupts the file. We insert before
+    // <ignoredErrors> when present, otherwise before </worksheet>.
+    // formula1 values must use &quot; (XML entity) not raw " inside the XML.
     const validationXml =
       `<dataValidations count="2">` +
-        `<dataValidation type="list" allowBlank="1" showInputMessage="1" showErrorMessage="1" sqref="B${rowRange}">` +
-          `<formula1>"2019,2023,both"</formula1>` +
+        `<dataValidation type="list" allowBlank="1" showInputMessage="1" showErrorMessage="1" sqref="B2:B1000">` +
+          `<formula1>&quot;2019,2023,both&quot;</formula1>` +
         `</dataValidation>` +
-        `<dataValidation type="list" allowBlank="1" showInputMessage="1" showErrorMessage="1" sqref="C${rowRange}">` +
-          `<formula1>"DDS_EXISTING,DDS,EXISTING"</formula1>` +
+        `<dataValidation type="list" allowBlank="1" showInputMessage="1" showErrorMessage="1" sqref="C2:C1000">` +
+          `<formula1>&quot;DDS_EXISTING,DDS,EXISTING&quot;</formula1>` +
         `</dataValidation>` +
       `</dataValidations>`;
 
-    const patched = sheetXml.replace('</worksheet>', validationXml + '</worksheet>');
-    zip.file('xl/worksheets/sheet1.xml', patched);
+    if (sheetXml.includes('<ignoredErrors>')) {
+      sheetXml = sheetXml.replace('<ignoredErrors>', validationXml + '<ignoredErrors>');
+    } else {
+      sheetXml = sheetXml.replace('</worksheet>', validationXml + '</worksheet>');
+    }
+
+    zip.file('xl/worksheets/sheet1.xml', sheetXml);
 
     const patchedBuf = await zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' });
     return new Blob([patchedBuf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
