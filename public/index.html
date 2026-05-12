@@ -145,6 +145,7 @@
 
   <!-- XLSX parser -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
   <script>
 /* -------------------- Config -------------------- */
@@ -1180,12 +1181,12 @@ function validateUserInfoAndSend(){
   };
 }
 
-function sendBatchEmailNotification(){
+async function sendBatchEmailNotification(){
   const userName = lastUserName || sessionChanges.find(c=>c.addedBy)?.addedBy || 'System User';
-  sendEmailNotification(null, userName, sessionChanges);
+  await sendEmailNotification(null, userName, sessionChanges);
 }
 
-function sendEmailNotification(newCodeEntry, userName, changes=null){
+async function sendEmailNotification(newCodeEntry, userName, changes=null){
   const arr = changes || [{
     code:newCodeEntry.Code_Value,
     description:newCodeEntry.Description,
@@ -1193,7 +1194,7 @@ function sendEmailNotification(newCodeEntry, userName, changes=null){
     type:'added'
   }];
 
-  const updatedExcelBlob = generateUpdatedExcelFile();
+  const updatedExcelBlob = await generateUpdatedExcelFile();
   const d=new Date(), iso=d.toISOString().split('T')[0].replace(/-/g,'');
   const subject = `A-SPEC New Code Update Notification - ${d.toLocaleDateString('en-AU',{year:'numeric',month:'long',day:'numeric'})}`;
   const newTerms = arr.map(ch=>`* **${ch.code}** - ${ch.description} (${ch.codelist})`).join('\n');
@@ -1221,7 +1222,7 @@ If required communicate with the proposer of the new code to address any issues.
 ---
 Please Note: This is an automated notification from the A-SPEC Codelists Dashboard.`;
 
-  const filename = `A-SPEC CODELISTS Version 2.0.9 MASTER WIP - ${iso}.xlsx`;
+  const filename = `A-SPEC New Codes for Review - ${iso}.xlsx`;
   showEmailPreview(subject, body, updatedExcelBlob, filename, arr, {
   userName,
   userEmail: lastUserEmail,
@@ -1234,38 +1235,116 @@ function getTotalTermsCount(){
   return codelists.reduce((t,c)=>t+c.codes.length,0);
 }
 
-/* -------------------- Export (Excel) -------------------- */
-function generateUpdatedExcelFile(){
-  try{
+/* ── Excel generation ────────────────────────────────────────────────────
+ *  Produces a NEW-RECORDS-ONLY xlsx for GISSA review containing:
+ *  - Only the codes added this session (sessionChanges)
+ *  - "Current Versions 2019 & 2023" dropdown (2019 / 2023 / both)
+ *  - "Spec_Coverage" dropdown (DDS_EXISTING / DDS / EXISTING)
+ *  - "Authorised by (whom yyyy/mm/dd)" free-text column at the end
+ *
+ *  SheetJS 0.18.5 community does not support dataValidation natively,
+ *  so we inject the validation XML directly into the xlsx zip using JSZip.
+ * ─────────────────────────────────────────────────────────────────────── */
+async function generateUpdatedExcelFile(){
+  try {
     const wb = XLSX.utils.book_new();
+
     const columns = [
-    "Spec","Spec_Coverage","Codelist_Name","Code_Value","Description","Comment",
-    "Date_Modified","Added - A, Modified - M, Removed - R","Change_Author","Organisation","Category"
-  ];
-    const masterData=[];
-    codelists.forEach(c=>{
-      c.codes.forEach(code=>{
-        const dateOut = normalizeDate(pick(code,'Date_Modified','DATE_MODIFIED','Date_Added','DATE_ADDED'));
-        masterData.push({
-          "Spec": pick(code, 'Spec','SPEC'),
-          "Spec_Coverage": pick(code, 'Spec_Coverage','SPEC_COVERAGE','Current Versions 2019 & 2023'),
-          "Codelist_Name": c.name,
-          "Code_Value": pick(code,'Code_Value','CODE_VALUE','Code','CODE'),
-          "Description": pick(code,'Description','DESCRIPTION'),
-          "Comment": pick(code,'Comment','COMMENT','comment'),
-          "Date_Modified": dateOut,
-          "Added - A, Modified - M, Removed - R": pick(code, 'Added - A, Modified - M, Removed - R','ChangeFlag') || 'A',
-          "Change_Author": pick(code,'Change_Author','CHANGE_AUTHOR','Added_By','ADDED_BY'),
-          "Organisation": pick(code,'Organisation','ORGANISATION','Organization','ORGANIZATION'),
-          "Category": pick(code,'Category')
-        });
-      });
+      "Spec",
+      "Current Versions 2019 & 2023",
+      "Spec_Coverage",
+      "Codelist_Name",
+      "Code_Value",
+      "Description",
+      "Comment",
+      "Date_Modified",
+      "Added - A, Modified - M, Removed - R",
+      "Change_Author",
+      "Organisation",
+      "Authorised by (whom yyyy/mm/dd)"
+    ];
+
+    // ── New records only (from sessionChanges) ──
+    const newRows = sessionChanges.map(ch => {
+      const ref   = ch.entryRef || {};
+      const dateOut = normalizeDate(pick(ref,'Date_Modified','DATE_MODIFIED') || ch.timestamp || '');
+      return {
+        "Spec":                                  pick(ref,'Spec','SPEC') || '',
+        "Current Versions 2019 & 2023":          '',   // blank — GISSA selects via dropdown
+        "Spec_Coverage":                         '',   // blank — GISSA selects via dropdown
+        "Codelist_Name":                         ch.codelist || '',
+        "Code_Value":                            ch.code || '',
+        "Description":                           ch.description || '',
+        "Comment":                               ch.comments || pick(ref,'Comment','COMMENT','comment') || '',
+        "Date_Modified":                         dateOut,
+        "Added - A, Modified - M, Removed - R":  'A',
+        "Change_Author":                         ch.addedBy || '',
+        "Organisation":                          ch.organisation || '',
+        "Authorised by (whom yyyy/mm/dd)":       ''    // blank — GISSA fills manually
+      };
     });
-    const ws = XLSX.utils.json_to_sheet(masterData, { header: columns });
-    XLSX.utils.book_append_sheet(wb, ws, "CODELIST_MASTER");
-    const buf = XLSX.write(wb,{bookType:'xlsx',type:'array'});
-    return new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-  }catch(e){ console.error('Error generating Excel:',e); return null; }
+
+    const ws = XLSX.utils.json_to_sheet(newRows, { header: columns });
+
+    // ── Column widths ──
+    ws['!cols'] = [
+      { wch: 8  },  // Spec
+      { wch: 20 },  // Current Versions
+      { wch: 16 },  // Spec_Coverage
+      { wch: 30 },  // Codelist_Name
+      { wch: 14 },  // Code_Value
+      { wch: 40 },  // Description
+      { wch: 30 },  // Comment
+      { wch: 14 },  // Date_Modified
+      { wch: 10 },  // A/M/R
+      { wch: 20 },  // Change_Author
+      { wch: 24 },  // Organisation
+      { wch: 28 },  // Authorised by
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, "NEW_CODES");
+
+    // ── Write to array buffer ──
+    const buf  = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+    // ── Inject dataValidation XML via JSZip ──
+    // SheetJS community doesn't write dataValidation, so we open the zip,
+    // patch the sheet XML, and repack.
+    if (typeof JSZip === 'undefined') {
+      console.warn('JSZip not loaded — dropdowns will not appear in xlsx');
+      return blob;
+    }
+
+    const zip      = await JSZip.loadAsync(buf);
+    const sheetXml = await zip.file('xl/worksheets/sheet1.xml').async('string');
+
+    // How many data rows do we have? (header row = row 1, data starts row 2)
+    const lastRow  = Math.max(newRows.length + 1, 2);
+    const dataRange = `2:${lastRow + 50}`; // extend range so it works for future rows too
+
+    // Col B = "Current Versions 2019 & 2023"  →  2019, 2023, both
+    // Col C = "Spec_Coverage"                 →  DDS_EXISTING, DDS, EXISTING
+    const validationXml = `<dataValidations count="2">` +
+      `<dataValidation type="list" allowBlank="1" showInputMessage="1" showErrorMessage="1" sqref="B${dataRange}">` +
+        `<formula1>"2019,2023,both"</formula1>` +
+      `</dataValidation>` +
+      `<dataValidation type="list" allowBlank="1" showInputMessage="1" showErrorMessage="1" sqref="C${dataRange}">` +
+        `<formula1>"DDS_EXISTING,DDS,EXISTING"</formula1>` +
+      `</dataValidation>` +
+    `</dataValidations>`;
+
+    // Insert just before </worksheet>
+    const patchedXml = sheetXml.replace('</worksheet>', validationXml + '</worksheet>');
+    zip.file('xl/worksheets/sheet1.xml', patchedXml);
+
+    const patchedBuf  = await zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' });
+    return new Blob([patchedBuf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+  } catch(e) {
+    console.error('Error generating Excel:', e);
+    return null;
+  }
 }
 
 /* -------------------- Email preview & send -------------------- */
