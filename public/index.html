@@ -1263,7 +1263,7 @@ async function generateUpdatedExcelFile(){
       "Added - A, Modified - M, Removed - R",
       "Change_Author",
       "Organisation",
-      "Authorised by (whom yyyy/mm/dd)"
+      "Authorised by (whom yyyymmdd)"
     ];
 
     // New records only — one row per sessionChange, NOT the full master codelist
@@ -1282,7 +1282,7 @@ async function generateUpdatedExcelFile(){
         "Added - A, Modified - M, Removed - R": 'A',
         "Change_Author":                        ch.addedBy || '',
         "Organisation":                         ch.organisation || '',
-        "Authorised by (whom yyyy/mm/dd)":      ''   // GISSA fills manually
+        "Authorised by (whom yyyymmdd)":      ''   // GISSA fills manually
       };
     });
 
