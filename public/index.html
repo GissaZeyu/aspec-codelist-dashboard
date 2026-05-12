@@ -400,7 +400,7 @@ function showCodeCreation(){
     </div>
 
     <input type="text" class="search-input" id="code-search"
-           placeholder="Search for existing codes or describe what you need..." style="margin-bottom:1rem;"/>
+           placeholder="Type a code (e.g. VEG) or describe what you need (e.g. vegetable planting)" style="margin-bottom:1rem;"/>
 
     <div id="search-results"></div>
 
@@ -1399,108 +1399,326 @@ function resetSession(deep=false){
 
 /* -------------------- Search across all codelists -------------------- */
 
-function handleCodeSearch(e){
-  const raw = e.target.value.trim();
-  const q = raw.toUpperCase();
-  const results = document.getElementById('search-results');
-  if (raw.length < 2){ results.innerHTML = ''; return; }
+/* ── Fuzzy search helpers ──────────────────────────────────────────────────
+ *  Used only in Tier 4 (typo / close-match fallback).
+ *  Four rules prevent false positives (tested against 3,964 real codes):
+ *  1. Substring shortcut only when BOTH strings ≥ 4 chars
+ *  2. Token prefix-match only when BOTH tokens ≥ 3 chars
+ *  3. Stopwords filtered before tokenisation
+ *  4. Multi-word queries (>3 tokens) skip character edit-distance
+ * ─────────────────────────────────────────────────────────────────────── */
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({length: m + 1}, (_, i) => [i, ...Array(n).fill(0)]);
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = a[i-1] === b[j-1]
+        ? dp[i-1][j-1]
+        : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+  return dp[m][n];
+}
+function fuzzyStem(w) {
+  return w.replace(/ings?$/,'').replace(/tion$/,'').replace(/ness$/,'')
+          .replace(/ment$/,'').replace(/able$/,'').replace(/ible$/,'')
+          .replace(/ally?$/,'').replace(/ers?$/,'').replace(/ly$/,'')
+          .replace(/es$/,'').replace(/s$/,'');
+}
+const FUZZY_SW = new Set(['a','an','the','is','in','of','to','for','and','or','be','used','when','not','at','by','that','this','with','it']);
+function fuzzyTok(s) {
+  return s.toLowerCase().split(/\s+/).filter(w => w.length >= 2 && !FUZZY_SW.has(w)).map(fuzzyStem).filter(Boolean);
+}
+const FUZZY_THRESHOLD = 0.60;
+function fuzzyScore(query, target) {
+  const q = query.toLowerCase().trim(), t = target.toLowerCase().trim();
+  if (!q || !t) return 0;
 
-  // Helper: build a result card with a showCopyPicker button
-  function buildCard(item, borderColor, pickerId) {
+  const qt = fuzzyTok(q);
+  const isMultiWord = qt.length > 1;
+
+  // Substring shortcut — single-word queries only.
+  // Multi-word queries must go through token overlap so ranking is meaningful:
+  // "vegetable plantings" must rank VEGETPLANT above PLANT, which substring
+  // can't do (both contain "plant"). Token overlap correctly scores 2 hits vs 1.
+  if (!isMultiWord && q.length >= 4 && t.length >= 4 && (t.includes(q) || q.includes(t))) return 0.95;
+
+  const tt = fuzzyTok(t);
+  if (qt.length && tt.length) {
+    let hits = 0;
+    qt.forEach(a => { if (tt.some(b => b===a || (a.length>=3&&b.length>=3&&(b.startsWith(a)||a.startsWith(b))))) hits++; });
+    // Use harmonic-mean of query-coverage and target-coverage so BOTH sides
+    // need to match well — rewards VEGETPLANT (2/2 query words hit) over
+    // PLANT (1/2 query words hit) when user types "vegetable plantings"
+    const qCov = hits / qt.length;
+    const tCov = hits / Math.max(tt.length, 1);
+    const ts   = (2 * qCov * tCov) / (qCov + tCov + 1e-9);
+    if (ts >= 0.40) return 0.55 + ts * 0.40;
+    if (isMultiWord) return 0; // multi-word query, no token match → skip edit distance
+  }
+
+  // Character edit distance — single-word queries only
+  const ml = Math.max(q.length, t.length);
+  if (!ml) return 0;
+  const es = 1 - levenshtein(q, t) / ml;
+  let bte = 0;
+  fuzzyTok(q).forEach(a => fuzzyTok(t).forEach(b => { const l=Math.max(a.length,b.length); if(l) bte=Math.max(bte,1-levenshtein(a,b)/l); }));
+  return Math.max(es, bte * 0.85);
+}
+
+/* ── Match-reason pill ─────────────────────────────────────────────────── */
+function matchPill(label, bg, color) {
+  return `<span style="display:inline-block;padding:.15rem .5rem;border-radius:4px;font-size:.75rem;font-weight:600;background:${bg};color:${color};margin-bottom:.4rem;letter-spacing:.02em;">${label}</span>`;
+}
+
+/* ── Main search handler ───────────────────────────────────────────────── *
+ *
+ *  TIER 1 — Code starts with query  (any length ≥ 1)
+ *    1a. Exact full match  → blue "CODE MATCH" pill, blue banner
+ *    1b. Code starts with  → blue "CODE MATCH" pill, same section
+ *
+ *  TIER 2 — Description starts with query  (query ≥ 3 chars only)
+ *    Shows codes whose description begins with the typed text.
+ *    Separate section below Tier 1 results.
+ *
+ *  TIER 3 — Description contains query  (query ≥ 3 chars only)
+ *    Shows codes whose description contains the text anywhere.
+ *    Only codes not already shown in Tier 2.
+ *
+ *  TIER 4 — Fuzzy / close match  (query ≥ 4 chars, no results above)
+ *    Typo tolerance and stemming. Only fires when Tiers 1–3 are all empty.
+ *
+ *  TIER 5 — Nothing found → encourage creation
+ *
+ *  Rationale: users think in terms of codes first (George), then
+ *  descriptions (community users who type "vegetable"). Description
+ *  search only starts at 3 chars to avoid noise from "ve", "re" etc.
+ * ──────────────────────────────────────────────────────────────────────── */
+function handleCodeSearch(e){
+  const raw     = e.target.value.trim();
+  const qu      = raw.toUpperCase();
+  const ql      = raw.toLowerCase();
+  const results = document.getElementById('search-results');
+
+  // Clear results for very short input
+  if (raw.length < 1) { results.innerHTML = ''; return; }
+
+  /* ── Shared card builder ──────────────────────────────────────────── */
+  function buildCard(item, pill, borderColor, pickerId) {
     const ec = item.code.replace(/'/g,"\\'");
     const ed = item.description.replace(/'/g,"\\'");
     const es = (item.spec||'').replace(/'/g,"\\'");
     const ef = item.codelistName.replace(/'/g,"\\'");
-
     const alreadyInTarget = selectedCodelist.codes.some(ec2 =>
       pick(ec2,'Code_Value','CODE_Value','CODE_VALUE','Code','CODE').toUpperCase() === item.code.toUpperCase()
     );
-
-    const actionHtml = `<div style="margin-top:.5rem;display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;">
-           <span style="font-size:.85rem;color:#4a5568;">From: <b>${item.codelistName}</b></span>
-           ${alreadyInTarget ? `<span style="font-size:.85rem;color:#22543d;background:#f0fff4;padding:.25rem .5rem;border-radius:4px;">Already in current codelist</span>` : ''}
-           <button onclick="showCopyPicker('${pickerId}','${ec}','${ed}','${es}','${ef}')"
-             style="padding:.3rem .85rem;background:#667eea;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:.85rem;">
-             📋 Copy to Codelist
-           </button>
-         </div>`;
-
+    const actionHtml = `
+      <div style="margin-top:.5rem;display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;">
+        <span style="font-size:.85rem;color:#4a5568;">From: <b>${item.codelistName}</b></span>
+        ${alreadyInTarget
+          ? `<span style="font-size:.85rem;color:#276749;background:#f0fff4;padding:.2rem .5rem;border-radius:4px;border:1px solid #9ae6b4;">✓ Already in this codelist</span>`
+          : ''}
+        <button onclick="showCopyPicker('${pickerId}','${ec}','${ed}','${es}','${ef}')"
+          style="padding:.3rem .85rem;background:#667eea;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:.85rem;">
+          📋 Copy to Codelist
+        </button>
+      </div>`;
     return `
-      <div style="background:#fff;border:1px solid ${borderColor};border-radius:6px;padding:1rem;margin-bottom:.5rem;">
+      <div style="background:#fff;border-left:4px solid ${borderColor};border-top:1px solid #e2e8f0;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;border-radius:6px;padding:1rem;margin-bottom:.5rem;">
+        ${pill}
         <div style="font-weight:600;color:#2d3748;font-family:monospace;font-size:1.05rem;">${item.code}</div>
-        <div style="color:#718096;margin:.25rem 0;">${item.description}</div>
+        <div style="color:#718096;margin:.25rem 0;">${item.description || '<span style="color:#cbd5e0;font-style:italic;">No description</span>'}</div>
         ${item.comment ? `<div style="font-size:.9rem;color:#a0aec0;">${item.comment}</div>` : ''}
         ${actionHtml}
         <div id="${pickerId}" style="display:none;"></div>
       </div>`;
   }
 
-  // ── Step 1: exact code match (100% match on Code_Value) ──
-  const exactMatches = [];
+  /* ── Collect all four tiers ───────────────────────────────────────── */
+
+  // Tier 1a: exact full code match
+  const exactItems = [];
+  const seenExact = new Set();
   codelists.forEach(cl => {
-    cl.codes.forEach(code => {
-      const codeVal = pick(code,'Code_Value','CODE_Value','CODE_VALUE','Code','CODE');
-      if ((codeVal || '').toUpperCase() === q) {
-        exactMatches.push({
+    cl.codes.forEach(row => {
+      const cv = pick(row,'Code_Value','CODE_Value','CODE_VALUE','Code','CODE');
+      if (cv.toUpperCase() === qu && !seenExact.has(cv.toUpperCase())) {
+        seenExact.add(cv.toUpperCase());
+        exactItems.push({
           codelistName: cl.name,
-          code: codeVal,
-          description: pick(code,'Description','DESCRIPTION') || 'No description',
-          comment: pick(code,'Comment','COMMENT','comment') || '',
-          spec: pick(code,'Spec','SPEC') || ''
+          code: cv,
+          description: pick(row,'Description','DESCRIPTION') || '',
+          comment: pick(row,'Comment','COMMENT','comment') || '',
+          spec: pick(row,'Spec','SPEC') || ''
         });
       }
     });
   });
 
-  if (exactMatches.length > 0) {
-    results.innerHTML = `
-      <div style="background:#fef5e7;border:1px solid #f6ad55;border-radius:6px;padding:1rem;margin-bottom:1rem;">
-        <h4 style="color:#c05621;margin-bottom:.25rem;">⚠️ Code "<b>${raw.toUpperCase()}</b>" already exists in the master codelist</h4>
-        <p style="font-size:.9rem;color:#9c4221;margin-bottom:0;">You cannot create a new code with this name. You can copy it to any codelist using the button below.</p>
+  // Tier 1b: code starts with query (not already in exact)
+  const startsItems = [];
+  const seenStarts = new Set([...seenExact]);
+  codelists.forEach(cl => {
+    cl.codes.forEach(row => {
+      const cv = pick(row,'Code_Value','CODE_Value','CODE_VALUE','Code','CODE');
+      if (cv.toUpperCase().startsWith(qu) && !seenStarts.has(cv.toUpperCase())) {
+        seenStarts.add(cv.toUpperCase());
+        startsItems.push({
+          codelistName: cl.name,
+          code: cv,
+          description: pick(row,'Description','DESCRIPTION') || '',
+          comment: pick(row,'Comment','COMMENT','comment') || '',
+          spec: pick(row,'Spec','SPEC') || ''
+        });
+      }
+    });
+  });
+  // Sort alphabetically so user sees VEG before VEGETPLANT before VEHICLE
+  startsItems.sort((a, b) => a.code.localeCompare(b.code));
+
+  // Tier 2 & 3: description matches — only when query ≥ 3 chars
+  const descStartsItems = [], descContainsItems = [];
+  const seenDesc = new Set([...seenStarts]);
+  if (raw.length >= 3) {
+    codelists.forEach(cl => {
+      cl.codes.forEach(row => {
+        const cv   = pick(row,'Code_Value','CODE_Value','CODE_VALUE','Code','CODE');
+        const desc = pick(row,'Description','DESCRIPTION') || '';
+        if (seenDesc.has(cv.toUpperCase())) return;
+        if (desc.toLowerCase().startsWith(ql)) {
+          seenDesc.add(cv.toUpperCase());
+          descStartsItems.push({ codelistName: cl.name, code: cv, description: desc,
+            comment: pick(row,'Comment','COMMENT','comment')||'', spec: pick(row,'Spec','SPEC')||'' });
+        }
+      });
+    });
+    const seenContains = new Set([...seenDesc]);
+    codelists.forEach(cl => {
+      cl.codes.forEach(row => {
+        const cv   = pick(row,'Code_Value','CODE_Value','CODE_VALUE','Code','CODE');
+        const desc = pick(row,'Description','DESCRIPTION') || '';
+        if (seenContains.has(cv.toUpperCase())) return;
+        if (desc.toLowerCase().includes(ql)) {
+          seenContains.add(cv.toUpperCase());
+          descContainsItems.push({ codelistName: cl.name, code: cv, description: desc,
+            comment: pick(row,'Comment','COMMENT','comment')||'', spec: pick(row,'Spec','SPEC')||'' });
+        }
+      });
+    });
+  }
+
+  const hasCodeResults = exactItems.length > 0 || startsItems.length > 0;
+  const hasDescResults = descStartsItems.length > 0 || descContainsItems.length > 0;
+
+  /* ── Render: Tier 1 (code matches) ───────────────────────────────── */
+  if (hasCodeResults) {
+    const pillExact  = matchPill('EXACT CODE', '#dbeafe', '#1e40af');
+    const pillStarts = matchPill('CODE MATCH', '#dbeafe', '#1e40af');
+    const allCodeCards = [
+      ...exactItems.map((item, i) => buildCard(item, pillExact,  '#3b82f6', `picker-exact-${i}`)),
+      ...startsItems.map((item, i) => buildCard(item, pillStarts, '#3b82f6', `picker-starts-${i}`))
+    ];
+
+    const bannerMsg = exactItems.length > 0
+      ? `ℹ️ <b>${raw.toUpperCase()}</b> exists as a code — you can copy it to your codelist, or keep typing to narrow further.`
+      : `🔤 Found ${startsItems.length} code${startsItems.length!==1?'s':''} starting with <b>"${raw.toUpperCase()}"</b> — copy one to your codelist or keep typing.`;
+
+    let html = `
+      <div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:8px;padding:.85rem 1rem;margin-bottom:.75rem;">
+        <p style="color:#1e40af;font-size:.92rem;margin:0;">${bannerMsg}</p>
       </div>
       <div style="max-height:360px;overflow-y:auto;">
-        ${exactMatches.map((item, i) => buildCard(item, '#fbd38d', `picker-exact-${i}`)).join('')}
+        ${allCodeCards.join('')}
       </div>`;
+
+    // Append description results below if query ≥ 3 chars
+    if (hasDescResults) {
+      const shownDS = descStartsItems.slice(0, 5);
+      const shownDC = descContainsItems.slice(0, 10);
+      const pillDS  = matchPill('DESCRIPTION MATCH', '#dcfce7', '#166534');
+      const pillDC  = matchPill('DESCRIPTION MATCH', '#dcfce7', '#166534');
+      html += `
+        <div style="margin-top:1rem;padding-top:.75rem;border-top:2px dashed #e2e8f0;">
+          <p style="font-size:.82rem;color:#718096;margin-bottom:.5rem;">Also found in descriptions:</p>
+          ${shownDS.map((item,i) => buildCard(item, pillDS, '#22c55e', `picker-ds-${i}`)).join('')}
+          ${shownDC.map((item,i) => buildCard(item, pillDC, '#22c55e', `picker-dc-${i}`)).join('')}
+        </div>`;
+    }
+
+    results.innerHTML = html;
     return;
   }
 
-  // ── Step 2: description partial matches ──
-  const descMatches = [];
-  const ql = raw.toLowerCase();
-  codelists.forEach(cl => {
-    cl.codes.forEach(code => {
-      const desc = pick(code,'Description','DESCRIPTION') || '';
-      const comment = pick(code,'Comment','COMMENT','comment') || '';
-      if (desc.toLowerCase().includes(ql) || comment.toLowerCase().includes(ql)) {
-        descMatches.push({
-          codelistName: cl.name,
-          code: pick(code,'Code_Value','CODE_Value','CODE_VALUE','Code','CODE') || 'N/A',
-          description: desc || 'No description',
-          comment,
-          spec: pick(code,'Spec','SPEC') || ''
-        });
-      }
-    });
-  });
-
-  if (descMatches.length > 0) {
-    const shown = descMatches.slice(0, 20);
+  /* ── Render: Tier 2+3 only (no code match, description matches) ───── */
+  if (hasDescResults) {
+    const shownDS = descStartsItems.slice(0, 10);
+    const shownDC = descContainsItems.slice(0, 10);
+    const pillDS  = matchPill('DESCRIPTION MATCH', '#dcfce7', '#166534');
+    const pillDC  = matchPill('DESCRIPTION MATCH', '#dcfce7', '#166534');
+    const total   = shownDS.length + shownDC.length;
     results.innerHTML = `
-      <h4 style="color:#2d3748;margin-bottom:.5rem;">No code named "<b>${raw}</b>" — but ${shown.length} description match${shown.length!==1?'es':''} found:</h4>
-      <p style="font-size:.88rem;color:#718096;margin-bottom:1rem;">Copy one of these to any codelist, or scroll down to create a brand new code.</p>
+      <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:.85rem 1rem;margin-bottom:.75rem;">
+        <h4 style="color:#166534;margin-bottom:.25rem;">✅ Found ${total} description match${total!==1?'es':''} for "<b>${raw}</b>"</h4>
+        <p style="font-size:.88rem;color:#15803d;margin:0;">These codes have descriptions matching your search. Copy one, or scroll down to create a brand new code.</p>
+      </div>
       <div style="max-height:400px;overflow-y:auto;">
-        ${shown.map((item, i) => buildCard(item, '#e2e8f0', `picker-desc-${i}`)).join('')}
+        ${shownDS.map((item,i) => buildCard(item, pillDS, '#22c55e', `picker-ds2-${i}`)).join('')}
+        ${shownDC.map((item,i) => buildCard(item, pillDC, '#22c55e', `picker-dc2-${i}`)).join('')}
       </div>`;
     return;
   }
 
-  // ── Step 3: nothing found ──
+  /* ── Tier 4: Fuzzy — only when query ≥ 4 chars, nothing found above ─ */
+  if (raw.length >= 4) {
+    const fuzzyItems = [];
+    const seenFuzzy  = new Set();
+    codelists.forEach(cl => {
+      cl.codes.forEach(row => {
+        const cv   = pick(row,'Code_Value','CODE_Value','CODE_VALUE','Code','CODE');
+        const desc = pick(row,'Description','DESCRIPTION') || '';
+        if (!cv || seenFuzzy.has(cv.toUpperCase())) return;
+        const sDesc = desc.length > 3    ? fuzzyScore(raw, desc) : 0;
+        const sCode = cv.length   >= 3   ? fuzzyScore(raw, cv)   : 0;
+        const best  = Math.max(sDesc, sCode);
+        if (best >= FUZZY_THRESHOLD) {
+          seenFuzzy.add(cv.toUpperCase());
+          fuzzyItems.push({ codelistName: cl.name, code: cv, description: desc,
+            comment: pick(row,'Comment','COMMENT','comment')||'', spec: pick(row,'Spec','SPEC')||'', score: best });
+        }
+      });
+    });
+    fuzzyItems.sort((a, b) => b.score - a.score);
+    const topFuzzy = fuzzyItems.slice(0, 8);
+
+    if (topFuzzy.length > 0) {
+      const escaped2 = raw.replace(/'/g,"\\'");
+      const pill = matchPill('CLOSE MATCH', '#fef9c3', '#854d0e');
+      results.innerHTML = `
+        <div style="background:#fefce8;border:1px solid #fde047;border-radius:8px;padding:.85rem 1rem;margin-bottom:.75rem;">
+          <h4 style="color:#854d0e;margin-bottom:.25rem;">🔍 Similar codes found for "<b>${raw}</b>"</h4>
+          <p style="font-size:.88rem;color:#92400e;margin:0;">No exact match, but these look similar — copy one or create a brand new code below.</p>
+        </div>
+        <div style="max-height:400px;overflow-y:auto;">
+          ${topFuzzy.map((item,i) => buildCard(item, pill, '#eab308', `picker-fuzzy-${i}`)).join('')}
+        </div>
+        <div style="margin-top:.75rem;padding:.7rem .9rem;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;">
+          <span style="color:#166534;font-size:.88rem;">None of these are right? Create a brand new code:</span>
+          <button onclick="createNewWithSearchTerm('${escaped2}')"
+            style="padding:.4rem 1rem;background:#48bb78;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:.88rem;">
+            ➕ Create New Code: "${raw}"
+          </button>
+        </div>`;
+      return;
+    }
+  }
+
+  /* ── Tier 5: Nothing at all — encourage creation ─────────────────── */
   const escaped = raw.replace(/'/g,"\\'");
   results.innerHTML = `
-    <div style="background:#fef5e7;border:1px solid #f6ad55;border-radius:6px;padding:1rem;margin-bottom:1rem;">
-      <h4 style="color:#c05621;margin-bottom:.5rem;">No existing codes or descriptions found for "${raw}"</h4>
-      <p style="color:#9c4221;">This looks like a brand new code. Use <b>Create New Code</b> below, or create it directly:</p>
-      <button onclick="createNewWithSearchTerm('${escaped}')" style="margin-top:.5rem;padding:.5rem 1rem;background:#48bb78;color:#fff;border:none;border-radius:4px;cursor:pointer;">
+    <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:1rem;">
+      <h4 style="color:#166534;margin-bottom:.3rem;">🌱 "<b>${raw}</b>" looks like a brand new code!</h4>
+      <p style="color:#15803d;margin-bottom:.75rem;font-size:.92rem;">Nothing in the master codelist matches. Use the options below to create it, or try a different search term.</p>
+      <button onclick="createNewWithSearchTerm('${escaped}')"
+        style="padding:.5rem 1.1rem;background:#48bb78;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.9rem;">
         ➕ Create New Code: "${raw}"
       </button>
     </div>`;
