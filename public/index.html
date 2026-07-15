@@ -99,7 +99,7 @@
       </div>
       <div style="margin-bottom:1.2rem;">
         <strong>File:</strong>
-        <span id="master-file-name" style="color:#667eea;">A-SPEC CODELISTS Version 2.0.10 MASTER WIP - 20260706.xlsx</span>
+        <span id="master-file-name" style="color:#667eea;">A-SPEC CODELISTS Version 2.0.10 MASTER WIP - 20260715.xlsx</span>
       </div>
       <p style="font-size:.9rem;color:#718096;margin-top:-.4rem;">
         Source file can also be downloaded from the
@@ -154,8 +154,8 @@ const EMAIL_TO   = "info@gissa.com.au";
 const EMAIL_FROM = "info@gissa.com.au"; // must be a verified sender
 
 // Hardcoded master file name in the same folder:
-const MASTER_FILE_URL  = "A-SPEC CODELISTS Version 2.0.10 MASTER WIP - 20260706.xlsx";
-const MASTER_FILE_NAME = "A-SPEC CODELISTS Version 2.0.10 MASTER WIP - 20260706.xlsx";
+const MASTER_FILE_URL  = "A-SPEC CODELISTS Version 2.0.10 MASTER WIP - 20260715.xlsx";
+const MASTER_FILE_NAME = "A-SPEC CODELISTS Version 2.0.10 MASTER WIP - 20260715.xlsx";
 
 /* Parses the version from MASTER_FILE_NAME and returns the next patch version.
  * e.g. "...Version 2.0.8 MASTER..." → "2.0.9"
@@ -198,6 +198,25 @@ function normalizeDate(v){
   return "";
 }
 
+// Historical records marked as removed must not appear as current codes.
+function isRemovedRecord(row){
+  const currentVersions = pick(
+    row,
+    'Current Versions\n2019 & 2023',
+    'Current Versions 2019 & 2023',
+    'CURRENT VERSIONS 2019 & 2023',
+    'Current_Versions'
+  ).toUpperCase();
+
+  const changeFlag = pick(
+    row,
+    'Added - A, Modified - M, Removed - R',
+    'ADDED - A, MODIFIED - M, REMOVED - R'
+  ).toUpperCase();
+
+  return currentVersions === 'REMOVED' || changeFlag === 'R';
+}
+
 /* -------------------- Email helpers -------------------- */
 async function blobToBase64(blob){
   const buf = await blob.arrayBuffer();
@@ -230,6 +249,7 @@ async function sendEmailViaBackend({ to = EMAIL_TO, subject, htmlBody, excelBlob
 
 /* -------------------- App state -------------------- */
 let codelists = [];
+let allMasterCodeValues = new Set();
 let selectedCodelist = null;
 let selectedExistingCode = null;
 let selectedNewCode = null;
@@ -239,9 +259,34 @@ let lastUserName = '', lastUserEmail = '', lastUserOrganisation = '', lastUserWa
 /* -------------------- Data processing -------------------- */
 function processCodelistData(data){
   const codelistMap = new Map();
-  data.forEach(row=>{
-    const codelistName = row['Codelist_Name'] || row['CODELIST_NAME'] || row['codelist_name'];
-    if (!codelistName) return;
+  allMasterCodeValues = new Set();
+
+  data.forEach(row => {
+    const codeValue = pick(
+      row,
+      'Code_Value',
+      'CODE_Value',
+      'CODE_VALUE',
+      'Code',
+      'CODE'
+    );
+
+    // Keep all historical code values reserved for uniqueness validation.
+    if (codeValue) {
+      allMasterCodeValues.add(codeValue.toUpperCase());
+    }
+
+    // Do not display historical removed records as current codes.
+    if (isRemovedRecord(row)) return;
+
+    const codelistName =
+      row['Codelist_Name'] ||
+      row['CODELIST_NAME'] ||
+      row['codelist_name'];
+
+    // Ignore incomplete rows that do not represent an actual current code.
+    if (!codelistName || !codeValue) return;
+
     if (!codelistMap.has(codelistName)){
       codelistMap.set(codelistName, {
         name: codelistName,
@@ -250,6 +295,7 @@ function processCodelistData(data){
         _specs: new Set()
       });
     }
+
     const entry = codelistMap.get(codelistName);
     entry.codes.push(row);
 
@@ -257,17 +303,15 @@ function processCodelistData(data){
     if (spec) entry._specs.add(spec);
   });
 
-  codelists = Array.from(codelistMap.values()).map(x => ({
-    name: x.name,
-    description: x.description,
-    codes: x.codes,
-    specs: Array.from(x._specs)
+  codelists = Array.from(codelistMap.values()).map(item => ({
+    name: item.name,
+    description: item.description,
+    codes: item.codes,
+    specs: Array.from(item._specs)
   }));
 
-  // ✅ sort alphabetically by name
-  codelists.sort((a,b) => a.name.localeCompare(b.name));
+  codelists.sort((a, b) => a.name.localeCompare(b.name));
 }
-
 
 
 /* -------------------- UI: Codelists (with pagination) -------------------- */
@@ -379,21 +423,89 @@ function selectCodelist(evt, codelistName){
 
 /* -------------------- Existing + creation UI -------------------- */
 function displayExistingCodes(){
-  return selectedCodelist.codes.map((code,idx)=>{
-    const codeVal = pick(code,'Code_Value','CODE_Value','CODE_VALUE','Code','CODE') || 'N/A';
-    const desc = pick(code,'Description','DESCRIPTION') || 'No description';
-    const comment = pick(code,'Comment','COMMENT','comment');
+  // Count repeated code values within the selected codelist.
+  const duplicateCounts = new Map();
 
-    // Browsing only: users can review current codes here.
-    // Copying is only available from the search results section below.
+  selectedCodelist.codes.forEach(code => {
+    const codeVal = pick(
+      code,
+      'Code_Value',
+      'CODE_Value',
+      'CODE_VALUE',
+      'Code',
+      'CODE'
+    ).toUpperCase();
+
+    duplicateCounts.set(
+      codeVal,
+      (duplicateCounts.get(codeVal) || 0) + 1
+    );
+  });
+
+  return selectedCodelist.codes.map((code, idx) => {
+    const codeVal =
+      pick(
+        code,
+        'Code_Value',
+        'CODE_Value',
+        'CODE_VALUE',
+        'Code',
+        'CODE'
+      ) || 'N/A';
+
+    const desc = pick(code, 'Description', 'DESCRIPTION');
+    const comment = pick(code, 'Comment', 'COMMENT', 'comment');
+
+    const specCoverage = pick(
+      code,
+      'Spec_Coverage',
+      'SPEC_COVERAGE',
+      'Spec Coverage'
+    );
+
+    const isDuplicateCode =
+      (duplicateCounts.get(codeVal.toUpperCase()) || 0) > 1;
+
+    // Show coverage when the same code has different meanings,
+    // or when the record does not apply to both DDS and EXISTING.
+    const showCoverage =
+      specCoverage &&
+      (
+        isDuplicateCode ||
+        specCoverage.toUpperCase() !== 'DDS_EXISTING'
+      );
+
     return `
-    <div class="existing-code-item" data-index="${idx}" style="padding:1rem;border-bottom:1px solid #e2e8f0;transition:background-color .2s;"
-         onmouseover="this.style.backgroundColor='#f7fafc'"
-         onmouseout="this.style.backgroundColor='white'">
-      <div style="font-weight:600;color:#2d3748;margin-bottom:.25rem;">${codeVal}</div>
-      <div style="color:#718096;margin-bottom:.25rem;">${desc}</div>
-      ${comment ? `<div style="font-size:.9rem;color:#a0aec0;">${comment}</div>` : ''}
-    </div>`;
+      <div class="existing-code-item"
+           data-index="${idx}"
+           style="padding:1rem;border-bottom:1px solid #e2e8f0;transition:background-color .2s;"
+           onmouseover="this.style.backgroundColor='#f7fafc'"
+           onmouseout="this.style.backgroundColor='white'">
+
+        <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:.25rem;">
+          <div style="font-weight:600;color:#2d3748;">
+            ${codeVal}
+          </div>
+
+          ${showCoverage ? `
+            <span title="Spec Coverage"
+                  style="display:inline-block;padding:.12rem .45rem;border-radius:4px;background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;font-size:.72rem;font-weight:600;">
+              ${specCoverage}
+            </span>
+          ` : ''}
+        </div>
+
+        <div style="color:${desc ? '#718096' : '#c05621'};margin-bottom:.25rem;${desc ? '' : 'font-style:italic;'}">
+          ${desc || 'Description missing in master data'}
+        </div>
+
+        ${comment ? `
+          <div style="font-size:.9rem;color:#a0aec0;">
+            ${comment}
+          </div>
+        ` : ''}
+      </div>
+    `;
   }).join('');
 }
 
@@ -792,9 +904,17 @@ function codeExistsInSelectedCodelist(code){
 
 function codeExistsAnywhere(code){
   const check = (code || '').toUpperCase();
-  return codelists.some(cl =>
+
+  return allMasterCodeValues.has(check) || codelists.some(cl =>
     cl.codes.some(ec =>
-      pick(ec,'Code_Value','CODE_Value','CODE_VALUE','Code','CODE').toUpperCase() === check
+      pick(
+        ec,
+        'Code_Value',
+        'CODE_Value',
+        'CODE_VALUE',
+        'Code',
+        'CODE'
+      ).toUpperCase() === check
     )
   );
 }
