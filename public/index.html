@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>A-SPEC Codelists Dashboard</title>
+  <title>A-SPEC Code Dashboard</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:'Inter',sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;color:white}
@@ -63,7 +63,7 @@
       <img src="A-Spec.jpg" alt="A-SPEC Logo" style="width:170px;height:auto;cursor:default" title="A-SPEC - Digital Data Specifications"/>
     </div>
     <div class="title-section">
-      <h1><span style="color:#eceef0;font-weight:600;">Codelists Dashboard</span></h1>
+      <h1><span style="color:#eceef0;font-weight:600;">Code Dashboard</span></h1>
       <p style="color:#e0e0e0;font-size:1rem;margin-top:.2rem;">Manage codes, abbreviated terms, and pick lists with intelligent search and selection</p>
     </div>
     <div class="gissa-logo">
@@ -1351,7 +1351,7 @@ Please review these changes and update any documentation or processes that refer
 If required communicate with the proposer of the new code to address any issues.
 
 ---
-Please Note: This is an automated notification from the A-SPEC Codelists Dashboard.`;
+Please Note: This is an automated notification from the A-SPEC Code Dashboard.`;
 
   const filename = `A-SPEC CODELISTS Version ${getNextVersion()} MASTER WIP - ${iso}.xlsx`;
   showEmailPreview(subject, body, updatedExcelBlob, filename, arr, {
@@ -1532,7 +1532,7 @@ Thanks for staying up to date!
 Best regards,
 The A-SPEC team
 ---
-Please Note: This is an automated notification from the A-SPEC Codelists Dashboard.`;
+Please Note: This is an automated notification from the A-SPEC Code Dashboard.`;
       await sendEmailViaBackend({ to: userEmail, subject: confirmSubject, htmlBody: confirmBody });
     }
 
