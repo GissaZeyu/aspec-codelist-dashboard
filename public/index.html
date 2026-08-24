@@ -1,73 +1,316 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>A-SPEC Code Dashboard</title>
   <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Inter',sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;color:white}
-    .header{background-color:#494949;color:#fff;padding:2rem;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 6px rgba(0,0,0,.2)}
-    .logo-container{display:flex;align-items:center;background:rgba(255,255,255,.9);padding:.5rem;border-radius:8px;box-shadow:0 4px 6px rgba(0,0,0,.1);transition:transform .2s ease}
-    .logo-container:hover{transform:scale(1.05)}
-    .title-section{text-align:center;flex-grow:1;margin:0 2rem}
-    .title-section h1{font-size:2.5rem;font-weight:300;margin-bottom:.5rem}
-    .title-section p{font-size:1.1rem;opacity:.9}
-    .gissa-logo{background:rgba(255,255,255,.9);border-radius:8px;display:flex;align-items:center;justify-content:center;padding:.5rem;box-shadow:0 4px 6px rgba(0,0,0,.1);transition:transform .2s ease}
-    .gissa-logo:hover{transform:scale(1.05)}
-    .gissa-logo img{width:40px;height:40px}
-    .main-content{max-width:1200px;margin:0 auto;padding:2rem}
-    .section{background:rgba(255,255,255,.95);border-radius:12px;padding:2rem;margin-bottom:2rem;box-shadow:0 8px 32px rgba(0,0,0,.1);color:#333}
-    .section-header{display:flex;align-items:center;margin-bottom:1.5rem}
-    .section-icon{font-size:1.5rem;margin-right:.5rem}
-    .section-title{font-size:1.5rem;font-weight:600;color:#2d3748}
-    .search-section{display:none}
-    .search-input{width:100%;padding:1rem;border:2px solid #667eea;border-radius:8px;font-size:1rem;background:#f3f4f6;color:#1e293b;box-shadow:0 2px 8px rgba(102,126,234,.1);transition:border-color .3s,box-shadow .3s}
-    .search-input:focus{outline:none;border-color:#667eea}
-    .codelist-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1rem;margin-top:1rem}
-    .codelist-card{background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:1rem;cursor:pointer;transition:all .3s ease}
-    .codelist-card:hover{border-color:#667eea;box-shadow:0 4px 12px rgba(102,126,234,.15)}
-    .codelist-card.selected{border-color:#667eea;background:#ebf8ff}
-    .codelist-name{font-weight:600;color:#2d3748;margin-bottom:.5rem}
-    .codelist-count{font-size:.8rem;color:#a0aec0}
-    .workflow-steps{display:flex;justify-content:space-between;margin-bottom:2rem}
-    .step{flex:1;text-align:center;padding:1rem;position:relative}
-    .step::after{content:'';position:absolute;top:50%;right:-1px;width:2px;height:60%;background:#e2e8f0;transform:translateY(-50%)}
-    .step:last-child::after{display:none}
-    .step-number{width:40px;height:40px;border-radius:50%;background:#e2e8f0;color:#718096;display:flex;align-items:center;justify-content:center;margin:0 auto .5rem;font-weight:600}
-    .step.active .step-number{background:#667eea;color:#fff}
-    .step.completed .step-number{background:#48bb78;color:#fff}
-    .step-title{font-weight:600;color:#2d3748;margin-bottom:.25rem}
-    .step-description{font-size:.9rem;color:#fff}
-    #download-master-btn{display:none !important}
-    /* pager */
-    #codelist-pager{display:flex;align-items:center;gap:.5rem;justify-content:flex-end;margin-top:12px}
-    #codelist-pager button{padding:.4rem .7rem;border:1px solid #e2e8f0;border-radius:6px;background:#fff;cursor:pointer}
-    #codelist-pager button:disabled{opacity:.5;cursor:not-allowed}
-    #codelist-pager select{padding:.35rem .5rem;border:1px solid #e2e8f0;border-radius:6px;background:#fff;color:#334155}
-    @media (max-width:768px){
-      .header{flex-direction:column;gap:1rem}
-      .title-section{margin:0}
-      .title-section h1{font-size:2rem}
-      .workflow-steps{flex-direction:column;gap:1rem}
-      .step::after{display:none}
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box
     }
 
-    .codelist-spec{font-size:.8rem;color:#475569;margin-top:.35rem}
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      color: white
+    }
 
+    .header {
+      background-color: #494949;
+      color: #fff;
+      padding: 2rem;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, .2)
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      background: rgba(255, 255, 255, .9);
+      padding: .5rem;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, .1);
+      transition: transform .2s ease
+    }
+
+    .logo-container:hover {
+      transform: scale(1.05)
+    }
+
+    .title-section {
+      text-align: center;
+      flex-grow: 1;
+      margin: 0 2rem
+    }
+
+    .title-section h1 {
+      font-size: 2.5rem;
+      font-weight: 300;
+      margin-bottom: .5rem
+    }
+
+    .title-section p {
+      font-size: 1.1rem;
+      opacity: .9
+    }
+
+    .gissa-logo {
+      background: rgba(255, 255, 255, .9);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: .5rem;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, .1);
+      transition: transform .2s ease
+    }
+
+    .gissa-logo:hover {
+      transform: scale(1.05)
+    }
+
+    .gissa-logo img {
+      width: 40px;
+      height: 40px
+    }
+
+    .main-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem
+    }
+
+    .section {
+      background: rgba(255, 255, 255, .95);
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, .1);
+      color: #333
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 1.5rem
+    }
+
+    .section-icon {
+      font-size: 1.5rem;
+      margin-right: .5rem
+    }
+
+    .section-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #2d3748
+    }
+
+    .search-section {
+      display: none
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 1rem;
+      border: 2px solid #667eea;
+      border-radius: 8px;
+      font-size: 1rem;
+      background: #f3f4f6;
+      color: #1e293b;
+      box-shadow: 0 2px 8px rgba(102, 126, 234, .1);
+      transition: border-color .3s, box-shadow .3s
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: #667eea
+    }
+
+    .codelist-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem
+    }
+
+    .codelist-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 1rem;
+      cursor: pointer;
+      transition: all .3s ease
+    }
+
+    .codelist-card:hover {
+      border-color: #667eea;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, .15)
+    }
+
+    .codelist-card.selected {
+      border-color: #667eea;
+      background: #ebf8ff
+    }
+
+    .codelist-name {
+      font-weight: 600;
+      color: #2d3748;
+      margin-bottom: .5rem
+    }
+
+    .codelist-count {
+      font-size: .8rem;
+      color: #a0aec0
+    }
+
+    .workflow-steps {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 2rem
+    }
+
+    .step {
+      flex: 1;
+      text-align: center;
+      padding: 1rem;
+      position: relative
+    }
+
+    .step::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      right: -1px;
+      width: 2px;
+      height: 60%;
+      background: #e2e8f0;
+      transform: translateY(-50%)
+    }
+
+    .step:last-child::after {
+      display: none
+    }
+
+    .step-number {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #e2e8f0;
+      color: #718096;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto .5rem;
+      font-weight: 600
+    }
+
+    .step.active .step-number {
+      background: #667eea;
+      color: #fff
+    }
+
+    .step.completed .step-number {
+      background: #48bb78;
+      color: #fff
+    }
+
+    .step-title {
+      font-weight: 600;
+      color: #2d3748;
+      margin-bottom: .25rem
+    }
+
+    .step-description {
+      font-size: .9rem;
+      color: #fff
+    }
+
+
+
+    /* pager */
+    #codelist-pager {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      justify-content: flex-end;
+      margin-top: 12px
+    }
+
+    #codelist-pager button {
+      padding: .4rem .7rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      background: #fff;
+      cursor: pointer
+    }
+
+    #codelist-pager button:disabled {
+      opacity: .5;
+      cursor: not-allowed
+    }
+
+    #codelist-pager select {
+      padding: .35rem .5rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      background: #fff;
+      color: #334155
+    }
+
+    @media (max-width:768px) {
+      .header {
+        flex-direction: column;
+        gap: 1rem
+      }
+
+      .title-section {
+        margin: 0
+      }
+
+      .title-section h1 {
+        font-size: 2rem
+      }
+
+      .workflow-steps {
+        flex-direction: column;
+        gap: 1rem
+      }
+
+      .step::after {
+        display: none
+      }
+    }
+
+    .codelist-spec {
+      font-size: .8rem;
+      color: #475569;
+      margin-top: .35rem
+    }
   </style>
 </head>
+
 <body>
   <div class="header">
     <div class="logo-container">
-      <img src="A-Spec.jpg" alt="A-SPEC Logo" style="width:170px;height:auto;cursor:default" title="A-SPEC - Digital Data Specifications"/>
+      <img src="A-Spec.jpg" alt="A-SPEC Logo" style="width:170px;height:auto;cursor:default"
+        title="A-SPEC - Digital Data Specifications" />
     </div>
     <div class="title-section">
       <h1><span style="color:#eceef0;font-weight:600;">Code Dashboard</span></h1>
-      <p style="color:#e0e0e0;font-size:1rem;margin-top:.2rem;">Manage codes, abbreviated terms, and pick lists with intelligent search and selection</p>
+      <p style="color:#e0e0e0;font-size:1rem;margin-top:.2rem;">Manage codes, abbreviated terms, and pick lists with
+        intelligent search and selection</p>
     </div>
     <div class="gissa-logo">
-      <img src="gissa-logo.png" alt="GISSA Logo" style="height:60px;width:auto;cursor:default" title="GISSA - Geospatial Information and Spatial Sciences Association"/>
+      <img src="gissa-logo.png" alt="GISSA Logo" style="height:60px;width:auto;cursor:default"
+        title="GISSA - Geospatial Information and Spatial Sciences Association" />
     </div>
   </div>
 
@@ -99,13 +342,20 @@
       </div>
       <div style="margin-bottom:1.2rem;">
         <strong>File:</strong>
-        <span id="master-file-name" style="color:#667eea;">A-SPEC CODELISTS Version 2.0.10 MASTER WIP - 20260820.xlsx</span>
+        <span id="master-file-name" style="color:#667eea;">A-SPEC CODELISTS Version 2.0.10 MASTER WIP -
+          20260822.xlsx</span>
       </div>
-      <p style="font-size:.9rem;color:#718096;margin-top:-.4rem;">
-        Source file can also be downloaded from the
-        <a href="https://www.a-specstandards.com.au/" target="_blank" style="color:#667eea;text-decoration:underline;">A-SPEC website</a>.
+      <p style="font-size:.9rem;color:#718096;margin-top:-.4rem;line-height:1.6;">
+        This Dashboard is currently using the Master Codelist version shown above.
+        To access the published Master Codelist, visit the
+        <a href="https://www.a-specstandards.com.au/search/node/codelist" target="_blank" rel="noopener noreferrer"
+          style="color:#667eea;text-decoration:underline;font-weight:600;">
+          A-SPEC Codelist search page
+        </a>.
+        From the search results, open the relevant <strong>SPEC Reference Material</strong>
+        page and locate the <strong>A-SPEC harmonised Codelist Master</strong>.
       </p>
-      <button id="download-master-btn" style="padding:.75rem 1.5rem;background:#48bb78;color:#fff;border:none;border-radius:6px;cursor:pointer;">📥 Download Master Codelist</button>
+
     </div>
 
     <!-- Codelist selection -->
@@ -114,7 +364,8 @@
         <span class="section-icon">🔍</span>
         <h2 class="section-title">Select Target Codelist</h2>
       </div>
-      <input type="text" class="search-input" id="codelist-search" placeholder="Search for codelists... (e.g., 'pipe material', 'valve type')"/>
+      <input type="text" class="search-input" id="codelist-search"
+        placeholder="Search for codelists... (e.g., 'pipe material', 'valve type')" />
       <div class="codelist-grid" id="codelist-grid"></div>
       <!-- Pagination bar -->
       <div id="codelist-pager">
@@ -138,7 +389,8 @@
         <h2 class="section-title">Search & Create Codes</h2>
       </div>
       <div id="creation-content">
-        <p style="color:#718096;text-align:center;padding:2rem;">Select a codelist from above to begin searching and creating codes.</p>
+        <p style="color:#718096;text-align:center;padding:2rem;">Select a codelist from above to begin searching and
+          creating codes.</p>
       </div>
     </div>
   </div>
@@ -148,334 +400,334 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
   <script>
-/* -------------------- Config -------------------- */
-const EMAIL_BACKEND_URL = "/api/send-codelist-email";
-const EMAIL_TO   = "info@gissa.com.au";
-const EMAIL_FROM = "info@gissa.com.au"; // must be a verified sender
+    /* -------------------- Config -------------------- */
+    const EMAIL_BACKEND_URL = "/api/send-codelist-email";
+    const EMAIL_TO = "info@gissa.com.au";
+    const EMAIL_FROM = "info@gissa.com.au"; // must be a verified sender
 
-// Hardcoded master file name in the same folder:
-const MASTER_FILE_URL  = "A-SPEC CODELISTS Version 2.0.10 MASTER WIP - 20260820.xlsx";
-const MASTER_FILE_NAME = "A-SPEC CODELISTS Version 2.0.10 MASTER WIP - 20260820.xlsx";
+    // Hardcoded master file name in the same folder:
+    const MASTER_FILE_URL = "A-SPEC CODELISTS Version 2.0.10 MASTER WIP - 20260822.xlsx";
+    const MASTER_FILE_NAME = "A-SPEC CODELISTS Version 2.0.10 MASTER WIP - 20260822.xlsx";
 
-/* Parses the version from MASTER_FILE_NAME and returns the next patch version.
- * e.g. "...Version 2.0.8 MASTER..." → "2.0.9"
- *      "...Version 2.1.0 MASTER..." → "2.1.1"
- * Falls back to "2.0.1" if no version is found. */
-function getNextVersion() {
-  const match = MASTER_FILE_NAME.match(/Version\s+(\d+)\.(\d+)\.(\d+)/i);
-  if (!match) return '2.0.1';
-  const [, major, minor, patch] = match;
-  return `${major}.${minor}.${parseInt(patch, 10) + 1}`;
-}
-
-/* -------------------- Utils -------------------- */
-function isValidEmail(s){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s); }
-function pick(obj, ...keys){
-  for (const k of keys){
-    const v = obj && obj[k];
-    if (v !== undefined && v !== null && String(v).trim() !== "") return String(v).trim();
-  }
-  return "";
-}
-function pad2(n){ return String(n).padStart(2,"0"); }
-function formatDate(d){
-  const dt = (d instanceof Date) ? d : new Date(d);
-  return `${dt.getFullYear()}-${pad2(dt.getMonth()+1)}-${pad2(dt.getDate())}`;
-}
-function normalizeDate(v){
-  if (v == null || v === "") return "";
-
-  if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
-
-  const asNum = (typeof v === "number") ? v : (/^\d+(\.\d+)?$/.test(v) ? Number(v) : NaN);
-  if (!isNaN(asNum) && asNum > 59 && asNum < 80000) {
-    const d = new Date(Date.UTC(1899, 11, 30));
-    d.setUTCDate(d.getUTCDate() + Math.floor(asNum));
-    return d.toISOString().slice(0, 10);
-  }
-  const t = Date.parse(v);
-  if (!isNaN(t)) return new Date(t).toISOString().slice(0, 10);
-  return "";
-}
-
-// Historical records marked as removed must not appear as current codes.
-function isRemovedRecord(row){
-  const currentVersions = pick(
-    row,
-    'Current Versions\n2019 & 2023',
-    'Current Versions 2019 & 2023',
-    'CURRENT VERSIONS 2019 & 2023',
-    'Current_Versions'
-  ).toUpperCase();
-
-  const changeFlag = pick(
-    row,
-    'Added - A, Modified - M, Removed - R',
-    'ADDED - A, MODIFIED - M, REMOVED - R'
-  ).toUpperCase();
-
-  return currentVersions === 'REMOVED' || changeFlag === 'R';
-}
-
-/* -------------------- Email helpers -------------------- */
-async function blobToBase64(blob){
-  const buf = await blob.arrayBuffer();
-  let s = "", b = new Uint8Array(buf);
-  for (let i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);
-  return btoa(s);
-}
-
-async function sendEmailViaBackend({ to = EMAIL_TO, subject, htmlBody, excelBlob = null, filename }) {
-  const payload = {
-    to,
-    from: EMAIL_FROM,
-    replyTo: EMAIL_TO,
-    subject,
-    html: htmlBody.replace(/\n/g, "<br>")
-  };
-  if (excelBlob) {
-    payload.xlsxBase64 = await blobToBase64(excelBlob);
-    payload.filename   = filename;
-  }
-
-  const resp = await fetch(EMAIL_BACKEND_URL, {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify(payload)
-  });
-  const data = await resp.json().catch(()=> ({}));
-  if (!resp.ok || data.ok === false) throw new Error(data.error || `Email send failed (HTTP ${resp.status})`);
-}
-
-/* -------------------- App state -------------------- */
-let codelists = [];
-let allMasterCodeValues = new Set();
-let selectedCodelist = null;
-let selectedExistingCode = null;
-let selectedNewCode = null;
-let sessionChanges = [];
-let lastUserName = '', lastUserEmail = '', lastUserOrganisation = '', lastUserWantsConfirm = false;
-
-/* -------------------- Data processing -------------------- */
-function processCodelistData(data){
-  const codelistMap = new Map();
-  allMasterCodeValues = new Set();
-
-  data.forEach(row => {
-    const codeValue = pick(
-      row,
-      'Code_Value',
-      'CODE_Value',
-      'CODE_VALUE',
-      'Code',
-      'CODE'
-    );
-
-    // Keep all historical code values reserved for uniqueness validation.
-    if (codeValue) {
-      allMasterCodeValues.add(codeValue.toUpperCase());
+    /* Parses the version from MASTER_FILE_NAME and returns the next patch version.
+     * e.g. "...Version 2.0.8 MASTER..." → "2.0.9"
+     *      "...Version 2.1.0 MASTER..." → "2.1.1"
+     * Falls back to "2.0.1" if no version is found. */
+    function getNextVersion() {
+      const match = MASTER_FILE_NAME.match(/Version\s+(\d+)\.(\d+)\.(\d+)/i);
+      if (!match) return '2.0.1';
+      const [, major, minor, patch] = match;
+      return `${major}.${minor}.${parseInt(patch, 10) + 1}`;
     }
 
-    // Do not display historical removed records as current codes.
-    if (isRemovedRecord(row)) return;
+    /* -------------------- Utils -------------------- */
+    function isValidEmail(s) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s); }
+    function pick(obj, ...keys) {
+      for (const k of keys) {
+        const v = obj && obj[k];
+        if (v !== undefined && v !== null && String(v).trim() !== "") return String(v).trim();
+      }
+      return "";
+    }
+    function pad2(n) { return String(n).padStart(2, "0"); }
+    function formatDate(d) {
+      const dt = (d instanceof Date) ? d : new Date(d);
+      return `${dt.getFullYear()}-${pad2(dt.getMonth() + 1)}-${pad2(dt.getDate())}`;
+    }
+    function normalizeDate(v) {
+      if (v == null || v === "") return "";
 
-    const codelistName =
-      row['Codelist_Name'] ||
-      row['CODELIST_NAME'] ||
-      row['codelist_name'];
+      if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
 
-    // Ignore incomplete rows that do not represent an actual current code.
-    if (!codelistName || !codeValue) return;
+      const asNum = (typeof v === "number") ? v : (/^\d+(\.\d+)?$/.test(v) ? Number(v) : NaN);
+      if (!isNaN(asNum) && asNum > 59 && asNum < 80000) {
+        const d = new Date(Date.UTC(1899, 11, 30));
+        d.setUTCDate(d.getUTCDate() + Math.floor(asNum));
+        return d.toISOString().slice(0, 10);
+      }
+      const t = Date.parse(v);
+      if (!isNaN(t)) return new Date(t).toISOString().slice(0, 10);
+      return "";
+    }
 
-    if (!codelistMap.has(codelistName)){
-      codelistMap.set(codelistName, {
-        name: codelistName,
-        description: row['Description'] || row['DESCRIPTION'] || '',
-        codes: [],
-        _specs: new Set()
+    // Historical records marked as removed must not appear as current codes.
+    function isRemovedRecord(row) {
+      const currentVersions = pick(
+        row,
+        'Current Versions\n2019 & 2023',
+        'Current Versions 2019 & 2023',
+        'CURRENT VERSIONS 2019 & 2023',
+        'Current_Versions'
+      ).toUpperCase();
+
+      const changeFlag = pick(
+        row,
+        'Added - A, Modified - M, Removed - R',
+        'ADDED - A, MODIFIED - M, REMOVED - R'
+      ).toUpperCase();
+
+      return currentVersions === 'REMOVED' || changeFlag === 'R';
+    }
+
+    /* -------------------- Email helpers -------------------- */
+    async function blobToBase64(blob) {
+      const buf = await blob.arrayBuffer();
+      let s = "", b = new Uint8Array(buf);
+      for (let i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);
+      return btoa(s);
+    }
+
+    async function sendEmailViaBackend({ to = EMAIL_TO, subject, htmlBody, excelBlob = null, filename }) {
+      const payload = {
+        to,
+        from: EMAIL_FROM,
+        replyTo: EMAIL_TO,
+        subject,
+        html: htmlBody.replace(/\n/g, "<br>")
+      };
+      if (excelBlob) {
+        payload.xlsxBase64 = await blobToBase64(excelBlob);
+        payload.filename = filename;
+      }
+
+      const resp = await fetch(EMAIL_BACKEND_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
       });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok || data.ok === false) throw new Error(data.error || `Email send failed (HTTP ${resp.status})`);
     }
 
-    const entry = codelistMap.get(codelistName);
-    entry.codes.push(row);
+    /* -------------------- App state -------------------- */
+    let codelists = [];
+    let allMasterCodeValues = new Set();
+    let selectedCodelist = null;
+    let selectedExistingCode = null;
+    let selectedNewCode = null;
+    let sessionChanges = [];
+    let lastUserName = '', lastUserEmail = '', lastUserOrganisation = '', lastUserWantsConfirm = false;
 
-    const spec = (row['Spec'] || row['SPEC'] || '').toString().trim();
-    if (spec) entry._specs.add(spec);
-  });
+    /* -------------------- Data processing -------------------- */
+    function processCodelistData(data) {
+      const codelistMap = new Map();
+      allMasterCodeValues = new Set();
 
-  codelists = Array.from(codelistMap.values()).map(item => ({
-    name: item.name,
-    description: item.description,
-    codes: item.codes,
-    specs: Array.from(item._specs)
-  }));
+      data.forEach(row => {
+        const codeValue = pick(
+          row,
+          'Code_Value',
+          'CODE_Value',
+          'CODE_VALUE',
+          'Code',
+          'CODE'
+        );
 
-  codelists.sort((a, b) => a.name.localeCompare(b.name));
-}
+        // Keep all historical code values reserved for uniqueness validation.
+        if (codeValue) {
+          allMasterCodeValues.add(codeValue.toUpperCase());
+        }
+
+        // Do not display historical removed records as current codes.
+        if (isRemovedRecord(row)) return;
+
+        const codelistName =
+          row['Codelist_Name'] ||
+          row['CODELIST_NAME'] ||
+          row['codelist_name'];
+
+        // Ignore incomplete rows that do not represent an actual current code.
+        if (!codelistName || !codeValue) return;
+
+        if (!codelistMap.has(codelistName)) {
+          codelistMap.set(codelistName, {
+            name: codelistName,
+            description: row['Description'] || row['DESCRIPTION'] || '',
+            codes: [],
+            _specs: new Set()
+          });
+        }
+
+        const entry = codelistMap.get(codelistName);
+        entry.codes.push(row);
+
+        const spec = (row['Spec'] || row['SPEC'] || '').toString().trim();
+        if (spec) entry._specs.add(spec);
+      });
+
+      codelists = Array.from(codelistMap.values()).map(item => ({
+        name: item.name,
+        description: item.description,
+        codes: item.codes,
+        specs: Array.from(item._specs)
+      }));
+
+      codelists.sort((a, b) => a.name.localeCompare(b.name));
+    }
 
 
-/* -------------------- UI: Codelists (with pagination) -------------------- */
-let CL_all = [];      // all codelists
-let CL_filtered = []; // filtered by search
-let CL_page = 1;      // 1-based
-let CL_pageSize = 24;
+    /* -------------------- UI: Codelists (with pagination) -------------------- */
+    let CL_all = [];      // all codelists
+    let CL_filtered = []; // filtered by search
+    let CL_page = 1;      // 1-based
+    let CL_pageSize = 24;
 
-function showCodelistSelection(){
-  document.getElementById('codelist-section').style.display = 'block';
+    function showCodelistSelection() {
+      document.getElementById('codelist-section').style.display = 'block';
 
-  // seed pagination arrays
-  CL_all = codelists.slice();
-  CL_filtered = CL_all.slice();
+      // seed pagination arrays
+      CL_all = codelists.slice();
+      CL_filtered = CL_all.slice();
 
-  const searchInput = document.getElementById('codelist-search');
-  searchInput.addEventListener('input', handleCodelistSearch);
+      const searchInput = document.getElementById('codelist-search');
+      searchInput.addEventListener('input', handleCodelistSearch);
 
-  const ps = document.getElementById('codelist-page-size');
-  const prev = document.getElementById('codelist-prev');
-  const next = document.getElementById('codelist-next');
+      const ps = document.getElementById('codelist-page-size');
+      const prev = document.getElementById('codelist-prev');
+      const next = document.getElementById('codelist-next');
 
-  CL_pageSize = parseInt(ps.value, 10) || 24;
+      CL_pageSize = parseInt(ps.value, 10) || 24;
 
-  ps.addEventListener('change', () => {
-    CL_pageSize = parseInt(ps.value, 10) || 24;
-    CL_page = 1;
-    renderCodelistPage();
-  });
-  prev.addEventListener('click', () => {
-    if (CL_page > 1) { CL_page--; renderCodelistPage(); }
-  });
-  next.addEventListener('click', () => {
-    const totalPages = Math.max(1, Math.ceil(CL_filtered.length / CL_pageSize));
-    if (CL_page < totalPages) { CL_page++; renderCodelistPage(); }
-  });
+      ps.addEventListener('change', () => {
+        CL_pageSize = parseInt(ps.value, 10) || 24;
+        CL_page = 1;
+        renderCodelistPage();
+      });
+      prev.addEventListener('click', () => {
+        if (CL_page > 1) { CL_page--; renderCodelistPage(); }
+      });
+      next.addEventListener('click', () => {
+        const totalPages = Math.max(1, Math.ceil(CL_filtered.length / CL_pageSize));
+        if (CL_page < totalPages) { CL_page++; renderCodelistPage(); }
+      });
 
-  CL_page = 1;
-  renderCodelistPage();
-}
+      CL_page = 1;
+      renderCodelistPage();
+    }
 
-function handleCodelistSearch(e){
-  const q = e.target.value.toLowerCase().trim();
-  if (!q) {
-    CL_filtered = CL_all.slice();
-  } else {
-    CL_filtered = CL_all.filter(c =>
-    (c.name || '').toLowerCase().includes(q)
-   );
-  }
-  CL_page = 1;
-  renderCodelistPage();
-}
+    function handleCodelistSearch(e) {
+      const q = e.target.value.toLowerCase().trim();
+      if (!q) {
+        CL_filtered = CL_all.slice();
+      } else {
+        CL_filtered = CL_all.filter(c =>
+          (c.name || '').toLowerCase().includes(q)
+        );
+      }
+      CL_page = 1;
+      renderCodelistPage();
+    }
 
-function renderCodelistPage(){
-  const total = CL_filtered.length;
-  const totalPages = Math.max(1, Math.ceil(total / CL_pageSize));
-  CL_page = Math.min(Math.max(1, CL_page), totalPages);
+    function renderCodelistPage() {
+      const total = CL_filtered.length;
+      const totalPages = Math.max(1, Math.ceil(total / CL_pageSize));
+      CL_page = Math.min(Math.max(1, CL_page), totalPages);
 
-  const start = (CL_page - 1) * CL_pageSize;
-  const pageItems = CL_filtered.slice(start, start + CL_pageSize);
+      const start = (CL_page - 1) * CL_pageSize;
+      const pageItems = CL_filtered.slice(start, start + CL_pageSize);
 
-  displayCodelists(pageItems);
+      displayCodelists(pageItems);
 
-  const info = document.getElementById('codelist-page-info');
-  const prev = document.getElementById('codelist-prev');
-  const next = document.getElementById('codelist-next');
+      const info = document.getElementById('codelist-page-info');
+      const prev = document.getElementById('codelist-prev');
+      const next = document.getElementById('codelist-next');
 
-  info.textContent = `Page ${CL_page} / ${totalPages}`;
-  prev.disabled = (CL_page <= 1);
-  next.disabled = (CL_page >= totalPages);
-}
+      info.textContent = `Page ${CL_page} / ${totalPages}`;
+      prev.disabled = (CL_page <= 1);
+      next.disabled = (CL_page >= totalPages);
+    }
 
-function displayCodelists(lists){
-  const grid = document.getElementById('codelist-grid');
+    function displayCodelists(lists) {
+      const grid = document.getElementById('codelist-grid');
 
-  const fmtSpecs = (arr)=>{
-    const clean = (arr || []).filter(s => s && s.trim() !== '');
-    if (clean.length === 0) return '';
-    const shown = clean.slice(0,3).join(', ');
-    const more = clean.length > 3 ? ` +${clean.length - 3} more` : '';
-    return `Spec: ${shown}${more}`;
-  };
+      const fmtSpecs = (arr) => {
+        const clean = (arr || []).filter(s => s && s.trim() !== '');
+        if (clean.length === 0) return '';
+        const shown = clean.slice(0, 3).join(', ');
+        const more = clean.length > 3 ? ` +${clean.length - 3} more` : '';
+        return `Spec: ${shown}${more}`;
+      };
 
-  grid.innerHTML = lists.map(c => `
+      grid.innerHTML = lists.map(c => `
     <div class="codelist-card" onclick="selectCodelist(event, '${c.name.replace(/'/g, "\\'")}')">
       <div class="codelist-name">${c.name}</div>
       <div class="codelist-count">${c.codes.length} codes</div>
       ${c.specs && c.specs.length ? `<div class="codelist-spec">${fmtSpecs(c.specs)}</div>` : ''}
     </div>
   `).join('');
-}
+    }
 
 
-function selectCodelist(evt, codelistName){
-  selectedCodelist = codelists.find(c => c.name === codelistName);
+    function selectCodelist(evt, codelistName) {
+      selectedCodelist = codelists.find(c => c.name === codelistName);
 
-  document.querySelectorAll('.codelist-card').forEach(card => card.classList.remove('selected'));
-  const card = evt.currentTarget || evt.target.closest('.codelist-card');
-  if (card) card.classList.add('selected');
+      document.querySelectorAll('.codelist-card').forEach(card => card.classList.remove('selected'));
+      const card = evt.currentTarget || evt.target.closest('.codelist-card');
+      if (card) card.classList.add('selected');
 
-  updateStep(2,'completed'); 
-  updateStep(3,'active');
-  showCodeCreation();
+      updateStep(2, 'completed');
+      updateStep(3, 'active');
+      showCodeCreation();
 
-  const creation = document.getElementById('creation-section');
-  if (creation){ creation.scrollIntoView({behavior:'smooth', block:'start'}); }
-}
+      const creation = document.getElementById('creation-section');
+      if (creation) { creation.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    }
 
-/* -------------------- Existing + creation UI -------------------- */
-function displayExistingCodes(){
-  // Count repeated code values within the selected codelist.
-  const duplicateCounts = new Map();
+    /* -------------------- Existing + creation UI -------------------- */
+    function displayExistingCodes() {
+      // Count repeated code values within the selected codelist.
+      const duplicateCounts = new Map();
 
-  selectedCodelist.codes.forEach(code => {
-    const codeVal = pick(
-      code,
-      'Code_Value',
-      'CODE_Value',
-      'CODE_VALUE',
-      'Code',
-      'CODE'
-    ).toUpperCase();
+      selectedCodelist.codes.forEach(code => {
+        const codeVal = pick(
+          code,
+          'Code_Value',
+          'CODE_Value',
+          'CODE_VALUE',
+          'Code',
+          'CODE'
+        ).toUpperCase();
 
-    duplicateCounts.set(
-      codeVal,
-      (duplicateCounts.get(codeVal) || 0) + 1
-    );
-  });
+        duplicateCounts.set(
+          codeVal,
+          (duplicateCounts.get(codeVal) || 0) + 1
+        );
+      });
 
-  return selectedCodelist.codes.map((code, idx) => {
-    const codeVal =
-      pick(
-        code,
-        'Code_Value',
-        'CODE_Value',
-        'CODE_VALUE',
-        'Code',
-        'CODE'
-      ) || 'N/A';
+      return selectedCodelist.codes.map((code, idx) => {
+        const codeVal =
+          pick(
+            code,
+            'Code_Value',
+            'CODE_Value',
+            'CODE_VALUE',
+            'Code',
+            'CODE'
+          ) || 'N/A';
 
-    const desc = pick(code, 'Description', 'DESCRIPTION');
-    const comment = pick(code, 'Comment', 'COMMENT', 'comment');
+        const desc = pick(code, 'Description', 'DESCRIPTION');
+        const comment = pick(code, 'Comment', 'COMMENT', 'comment');
 
-    const specCoverage = pick(
-      code,
-      'Spec_Coverage',
-      'SPEC_COVERAGE',
-      'Spec Coverage'
-    );
+        const specCoverage = pick(
+          code,
+          'Spec_Coverage',
+          'SPEC_COVERAGE',
+          'Spec Coverage'
+        );
 
-    const isDuplicateCode =
-      (duplicateCounts.get(codeVal.toUpperCase()) || 0) > 1;
+        const isDuplicateCode =
+          (duplicateCounts.get(codeVal.toUpperCase()) || 0) > 1;
 
-    // Show coverage when the same code has different meanings,
-    // or when the record does not apply to both DDS and EXISTING.
-    const showCoverage =
-      specCoverage &&
-      (
-        isDuplicateCode ||
-        specCoverage.toUpperCase() !== 'DDS_EXISTING'
-      );
+        // Show coverage when the same code has different meanings,
+        // or when the record does not apply to both DDS and EXISTING.
+        const showCoverage =
+          specCoverage &&
+          (
+            isDuplicateCode ||
+            specCoverage.toUpperCase() !== 'DDS_EXISTING'
+          );
 
-    return `
+        return `
       <div class="existing-code-item"
            data-index="${idx}"
            style="padding:1rem;border-bottom:1px solid #e2e8f0;transition:background-color .2s;"
@@ -506,13 +758,13 @@ function displayExistingCodes(){
         ` : ''}
       </div>
     `;
-  }).join('');
-}
+      }).join('');
+    }
 
-function showCodeCreation(){
-  document.getElementById('creation-section').style.display='block';
-  const content = document.getElementById('creation-content');
-  content.innerHTML = `
+    function showCodeCreation() {
+      document.getElementById('creation-section').style.display = 'block';
+      const content = document.getElementById('creation-content');
+      content.innerHTML = `
     <h3>Selected Codelist: ${selectedCodelist.name}</h3>
     <p style="color:#718096;margin-bottom:2rem;">This codelist contains ${selectedCodelist.codes.length} existing codes.</p>
 
@@ -613,60 +865,60 @@ function showCodeCreation(){
 
   `;
 
-  document.getElementById('code-search').addEventListener('input', handleCodeSearch);
-  document.getElementById('new-code-description').addEventListener('input', generateCodeSuggestions);
-}
+      document.getElementById('code-search').addEventListener('input', handleCodeSearch);
+      document.getElementById('new-code-description').addEventListener('input', generateCodeSuggestions);
+    }
 
-function selectExistingCode(index){
-  // kept for highlight only — copying is now via showCopyPicker
-  selectedExistingCode = selectedCodelist.codes[index];
-}
+    function selectExistingCode(index) {
+      // kept for highlight only — copying is now via showCopyPicker
+      selectedExistingCode = selectedCodelist.codes[index];
+    }
 
-// ── Unified inline codelist picker ──────────────────────────────────────────
-// pickerId  : id of the <div> to render the picker into
-// code/desc/spec : the code being copied
-// sourceCodelistName (optional) : where the code originally lives
-window.escapeForSingleQuote = function(value) {
-  return String(value || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-};
+    // ── Unified inline codelist picker ──────────────────────────────────────────
+    // pickerId  : id of the <div> to render the picker into
+    // code/desc/spec : the code being copied
+    // sourceCodelistName (optional) : where the code originally lives
+    window.escapeForSingleQuote = function (value) {
+      return String(value || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    };
 
-// ── Copy picker: current codelist button + mini searchable codelist list ─────
-window.showCopyPicker = function(pickerId, code, desc, spec, sourceCodelistName) {
-  // Close any other open pickers first
-  document.querySelectorAll('.copy-picker-panel').forEach(p => {
-    if (p.id !== pickerId) { p.style.display = 'none'; p.innerHTML = ''; }
-  });
+    // ── Copy picker: current codelist button + mini searchable codelist list ─────
+    window.showCopyPicker = function (pickerId, code, desc, spec, sourceCodelistName) {
+      // Close any other open pickers first
+      document.querySelectorAll('.copy-picker-panel').forEach(p => {
+        if (p.id !== pickerId) { p.style.display = 'none'; p.innerHTML = ''; }
+      });
 
-  const panel = document.getElementById(pickerId);
-  if (!panel) return;
+      const panel = document.getElementById(pickerId);
+      if (!panel) return;
 
-  // Toggle: if already open, close it
-  if (panel.style.display === 'block') {
-    panel.style.display = 'none';
-    panel.innerHTML = '';
-    return;
-  }
+      // Toggle: if already open, close it
+      if (panel.style.display === 'block') {
+        panel.style.display = 'none';
+        panel.innerHTML = '';
+        return;
+      }
 
-  const currentName = selectedCodelist ? selectedCodelist.name : '';
-  const currentAlreadyHas = selectedCodelist
-    ? selectedCodelist.codes.some(ec =>
-        pick(ec,'Code_Value','CODE_Value','CODE_VALUE','Code','CODE').toUpperCase() === code.toUpperCase()
-      )
-    : true;
+      const currentName = selectedCodelist ? selectedCodelist.name : '';
+      const currentAlreadyHas = selectedCodelist
+        ? selectedCodelist.codes.some(ec =>
+          pick(ec, 'Code_Value', 'CODE_Value', 'CODE_VALUE', 'Code', 'CODE').toUpperCase() === code.toUpperCase()
+        )
+        : true;
 
-  const ec = escapeForSingleQuote(code);
-  const ed = escapeForSingleQuote(desc);
-  const es = escapeForSingleQuote(spec || '');
-  const et = escapeForSingleQuote(currentName);
-  const srcLabel = sourceCodelistName
-    ? `<div style="font-size:.82rem;color:#718096;margin-bottom:.5rem;">Source: <b>${sourceCodelistName}</b></div>`
-    : '';
+      const ec = escapeForSingleQuote(code);
+      const ed = escapeForSingleQuote(desc);
+      const es = escapeForSingleQuote(spec || '');
+      const et = escapeForSingleQuote(currentName);
+      const srcLabel = sourceCodelistName
+        ? `<div style="font-size:.82rem;color:#718096;margin-bottom:.5rem;">Source: <b>${sourceCodelistName}</b></div>`
+        : '';
 
-  const currentAction = currentAlreadyHas
-    ? `<div style="padding:.6rem .75rem;background:#fff;border:1px solid #e2e8f0;border-radius:8px;color:#4a5568;">
+      const currentAction = currentAlreadyHas
+        ? `<div style="padding:.6rem .75rem;background:#fff;border:1px solid #e2e8f0;border-radius:8px;color:#4a5568;">
          <b>Current target:</b> ${currentName || 'Not selected'} <span style="color:#c05621;">— already has this code</span>
        </div>`
-    : `<div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;padding:.55rem .65rem;background:#fff;border:1px solid #c3d0f5;border-radius:8px;">
+        : `<div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;padding:.55rem .65rem;background:#fff;border:1px solid #c3d0f5;border-radius:8px;">
          <div style="flex:1;min-width:220px;color:#2d3748;font-size:.9rem;">
            <b>Current target:</b> ${currentName}
          </div>
@@ -676,12 +928,12 @@ window.showCopyPicker = function(pickerId, code, desc, spec, sourceCodelistName)
          </button>
        </div>`;
 
-  panel.className = 'copy-picker-panel';
-  panel.style.display = 'block';
-  panel.dataset.copyCode = code;
-  panel.dataset.copyDesc = desc;
-  panel.dataset.copySpec = spec || '';
-  panel.innerHTML = `
+      panel.className = 'copy-picker-panel';
+      panel.style.display = 'block';
+      panel.dataset.copyCode = code;
+      panel.dataset.copyDesc = desc;
+      panel.dataset.copySpec = spec || '';
+      panel.innerHTML = `
     <div style="margin-top:.75rem;padding:.85rem .9rem;background:#f0f4ff;border:1px solid #c3d0f5;border-radius:8px;">
       <div style="display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start;margin-bottom:.55rem;">
         <div>
@@ -709,55 +961,55 @@ window.showCopyPicker = function(pickerId, code, desc, spec, sourceCodelistName)
 
       <div id="picker-msg-${pickerId}" style="margin-top:.5rem;"></div>
     </div>`;
-};
+    };
 
-window.renderCopyTargetCards = function(pickerId) {
-  const panel = document.getElementById(pickerId);
-  const search = document.getElementById(`picker-search-${pickerId}`);
-  const results = document.getElementById(`picker-results-${pickerId}`);
-  if (!panel || !search || !results) return;
+    window.renderCopyTargetCards = function (pickerId) {
+      const panel = document.getElementById(pickerId);
+      const search = document.getElementById(`picker-search-${pickerId}`);
+      const results = document.getElementById(`picker-results-${pickerId}`);
+      if (!panel || !search || !results) return;
 
-  const code = panel.dataset.copyCode || '';
-  const desc = panel.dataset.copyDesc || '';
-  const spec = panel.dataset.copySpec || '';
-  const q = search.value.toLowerCase().trim();
+      const code = panel.dataset.copyCode || '';
+      const desc = panel.dataset.copyDesc || '';
+      const spec = panel.dataset.copySpec || '';
+      const q = search.value.toLowerCase().trim();
 
-  if (q.length < 1) {
-    results.style.display = 'none';
-    results.innerHTML = '';
-    return;
-  }
+      if (q.length < 1) {
+        results.style.display = 'none';
+        results.innerHTML = '';
+        return;
+      }
 
-  const currentName = selectedCodelist ? selectedCodelist.name : '';
-  const allMatches = codelists
-    .filter(cl => cl.name !== currentName && cl.name.toLowerCase().includes(q))
-    .map(cl => {
-      const alreadyHas = cl.codes.some(ec =>
-        pick(ec,'Code_Value','CODE_Value','CODE_VALUE','Code','CODE').toUpperCase() === code.toUpperCase()
-      );
-      return { cl, alreadyHas };
-    });
+      const currentName = selectedCodelist ? selectedCodelist.name : '';
+      const allMatches = codelists
+        .filter(cl => cl.name !== currentName && cl.name.toLowerCase().includes(q))
+        .map(cl => {
+          const alreadyHas = cl.codes.some(ec =>
+            pick(ec, 'Code_Value', 'CODE_Value', 'CODE_VALUE', 'Code', 'CODE').toUpperCase() === code.toUpperCase()
+          );
+          return { cl, alreadyHas };
+        });
 
-  const matches = allMatches.slice(0, 6);
-  results.style.display = 'block';
+      const matches = allMatches.slice(0, 6);
+      results.style.display = 'block';
 
-  if (matches.length === 0) {
-    results.innerHTML = `<div style="padding:.65rem;background:#fff;border:1px solid #e2e8f0;border-radius:6px;color:#718096;">No matching codelists found.</div>`;
-    return;
-  }
+      if (matches.length === 0) {
+        results.innerHTML = `<div style="padding:.65rem;background:#fff;border:1px solid #e2e8f0;border-radius:6px;color:#718096;">No matching codelists found.</div>`;
+        return;
+      }
 
-  const ec = escapeForSingleQuote(code);
-  const ed = escapeForSingleQuote(desc);
-  const es = escapeForSingleQuote(spec || '');
-  const moreNote = allMatches.length > matches.length
-    ? `<div style="font-size:.8rem;color:#718096;margin-top:.35rem;">Showing first ${matches.length} matches. Type more letters to narrow the result.</div>`
-    : '';
+      const ec = escapeForSingleQuote(code);
+      const ed = escapeForSingleQuote(desc);
+      const es = escapeForSingleQuote(spec || '');
+      const moreNote = allMatches.length > matches.length
+        ? `<div style="font-size:.8rem;color:#718096;margin-top:.35rem;">Showing first ${matches.length} matches. Type more letters to narrow the result.</div>`
+        : '';
 
-  results.innerHTML = `
+      results.innerHTML = `
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:.45rem;">
-      ${matches.map(({cl, alreadyHas}) => {
+      ${matches.map(({ cl, alreadyHas }) => {
         const et = escapeForSingleQuote(cl.name);
-        const specText = cl.specs && cl.specs.length ? `Spec: ${cl.specs.slice(0,2).join(', ')}${cl.specs.length > 2 ? ' +' + (cl.specs.length - 2) + ' more' : ''}` : '';
+        const specText = cl.specs && cl.specs.length ? `Spec: ${cl.specs.slice(0, 2).join(', ')}${cl.specs.length > 2 ? ' +' + (cl.specs.length - 2) + ' more' : ''}` : '';
         const action = alreadyHas
           ? `<div style="font-size:.8rem;color:#c05621;margin-top:.25rem;">Already has this code</div>`
           : `<button onclick="confirmCopyToCodelist('${ec}','${ed}','${es}','${et}','${pickerId}')"
@@ -774,364 +1026,364 @@ window.renderCopyTargetCards = function(pickerId) {
       }).join('')}
     </div>
     ${moreNote}`;
-};
+    };
 
-// Called when user confirms which codelist to copy to
-window.confirmCopyToCodelist = function(code, desc, spec, targetName, pickerId) {
-  if (!targetName) {
-    const msg = document.getElementById('picker-msg-' + pickerId);
-    if (msg) msg.innerHTML = '<span style="color:#c05621;font-size:.87rem;">⚠️ Please select a target codelist first.</span>';
-    return;
-  }
+    // Called when user confirms which codelist to copy to
+    window.confirmCopyToCodelist = function (code, desc, spec, targetName, pickerId) {
+      if (!targetName) {
+        const msg = document.getElementById('picker-msg-' + pickerId);
+        if (msg) msg.innerHTML = '<span style="color:#c05621;font-size:.87rem;">⚠️ Please select a target codelist first.</span>';
+        return;
+      }
 
-  const targetCL = codelists.find(cl => cl.name === targetName);
-  if (!targetCL) return;
+      const targetCL = codelists.find(cl => cl.name === targetName);
+      if (!targetCL) return;
 
-  const alreadyHas = targetCL.codes.some(ec =>
-    pick(ec,'Code_Value','CODE_Value','CODE_VALUE','Code','CODE').toUpperCase() === code.toUpperCase()
-  );
-  if (alreadyHas) {
-    const msg = document.getElementById('picker-msg-' + pickerId);
-    if (msg) msg.innerHTML = `<span style="color:#c05621;font-size:.87rem;">⚠️ <b>${code}</b> already exists in <b>${targetName}</b>.</span>`;
-    return;
-  }
+      const alreadyHas = targetCL.codes.some(ec =>
+        pick(ec, 'Code_Value', 'CODE_Value', 'CODE_VALUE', 'Code', 'CODE').toUpperCase() === code.toUpperCase()
+      );
+      if (alreadyHas) {
+        const msg = document.getElementById('picker-msg-' + pickerId);
+        if (msg) msg.innerHTML = `<span style="color:#c05621;font-size:.87rem;">⚠️ <b>${code}</b> already exists in <b>${targetName}</b>.</span>`;
+        return;
+      }
 
-  selectedCodelist = targetCL;
-  selectedNewCode = { code, description: desc, _spec: spec };
+      selectedCodelist = targetCL;
+      selectedNewCode = { code, description: desc, _spec: spec };
 
-  const panel = document.getElementById(pickerId);
-  if (panel) { panel.style.display = 'none'; panel.innerHTML = ''; }
+      const panel = document.getElementById(pickerId);
+      if (panel) { panel.style.display = 'none'; panel.innerHTML = ''; }
 
-  const h3 = document.querySelector('#creation-content h3');
-  if (h3) h3.textContent = `Selected Codelist: ${targetName}`;
+      const h3 = document.querySelector('#creation-content h3');
+      if (h3) h3.textContent = `Selected Codelist: ${targetName}`;
 
-  addNewCodeToCodelist({ skipUserInfo: true });
-};
+      addNewCodeToCodelist({ skipUserInfo: true });
+    };
 
-function showAutoCodeCreation(){
-  document.getElementById('create-auto-section').style.display='block';
-  document.getElementById('create-manual-section').style.display='none';
-  document.getElementById('new-code-description').focus();
-}
-function showManualCodeCreation(){
-  document.getElementById('create-manual-section').style.display='block';
-  document.getElementById('create-auto-section').style.display='none';
-  document.getElementById('manual-code-name').focus();
-}
+    function showAutoCodeCreation() {
+      document.getElementById('create-auto-section').style.display = 'block';
+      document.getElementById('create-manual-section').style.display = 'none';
+      document.getElementById('new-code-description').focus();
+    }
+    function showManualCodeCreation() {
+      document.getElementById('create-manual-section').style.display = 'block';
+      document.getElementById('create-auto-section').style.display = 'none';
+      document.getElementById('manual-code-name').focus();
+    }
 
-/* -------------------- Create/Validate -------------------- */
-function validateAndCreateManualCode(){
-  const codeName = document.getElementById('manual-code-name').value.trim().toUpperCase().replace(/\s/g, '');
-  const description = document.getElementById('manual-code-description').value.trim();
-  const msgDiv = document.getElementById('manual-validation-message');
+    /* -------------------- Create/Validate -------------------- */
+    function validateAndCreateManualCode() {
+      const codeName = document.getElementById('manual-code-name').value.trim().toUpperCase().replace(/\s/g, '');
+      const description = document.getElementById('manual-code-description').value.trim();
+      const msgDiv = document.getElementById('manual-validation-message');
 
-  if (!codeName){
-    msgDiv.innerHTML = '<div style="background:#fee;border:1px solid #f88;padding:.75rem;border-radius:4px;color:#c00;">❌ Please enter a code name.</div>';
-    return;
-  }
-  if (codeName.length > 10){
-    msgDiv.innerHTML = '<div style="background:#fee;border:1px solid #f88;padding:.75rem;border-radius:4px;color:#c00;">❌ Code name must be 10 characters or less.</div>';
-    return;
-  }
-  if (/\s/.test(codeName)){
-    msgDiv.innerHTML = '<div style="background:#fee;border:1px solid #f88;padding:.75rem;border-radius:4px;color:#c00;">❌ Code name cannot contain spaces.</div>';
-    return;
-  }
-  if (!description){
-    msgDiv.innerHTML = '<div style="background:#fee;border:1px solid #f88;padding:.75rem;border-radius:4px;color:#c00;">❌ Please enter a description.</div>';
-    return;
-  }
-  if (codeExists(codeName)){
-    msgDiv.innerHTML = '<div style="background:#fee;border:1px solid #f88;padding:.75rem;border-radius:4px;color:#c00;">❌ This code already exists in the master codelist.</div>';
-    return;
-  }
+      if (!codeName) {
+        msgDiv.innerHTML = '<div style="background:#fee;border:1px solid #f88;padding:.75rem;border-radius:4px;color:#c00;">❌ Please enter a code name.</div>';
+        return;
+      }
+      if (codeName.length > 10) {
+        msgDiv.innerHTML = '<div style="background:#fee;border:1px solid #f88;padding:.75rem;border-radius:4px;color:#c00;">❌ Code name must be 10 characters or less.</div>';
+        return;
+      }
+      if (/\s/.test(codeName)) {
+        msgDiv.innerHTML = '<div style="background:#fee;border:1px solid #f88;padding:.75rem;border-radius:4px;color:#c00;">❌ Code name cannot contain spaces.</div>';
+        return;
+      }
+      if (!description) {
+        msgDiv.innerHTML = '<div style="background:#fee;border:1px solid #f88;padding:.75rem;border-radius:4px;color:#c00;">❌ Please enter a description.</div>';
+        return;
+      }
+      if (codeExists(codeName)) {
+        msgDiv.innerHTML = '<div style="background:#fee;border:1px solid #f88;padding:.75rem;border-radius:4px;color:#c00;">❌ This code already exists in the master codelist.</div>';
+        return;
+      }
 
-  selectedNewCode = {code: codeName, description: description};
+      selectedNewCode = { code: codeName, description: description };
 
-  // Manual code validation is now treated as the add action.
-  // User details are collected once before the final email notification, not after each change.
-  addNewCodeToCodelist({ skipUserInfo: true });
-}
+      // Manual code validation is now treated as the add action.
+      // User details are collected once before the final email notification, not after each change.
+      addNewCodeToCodelist({ skipUserInfo: true });
+    }
 
-function generateCodeSuggestions(){
-  const description = document.getElementById('new-code-description').value.trim();
-  const suggestionsDiv = document.getElementById('code-suggestions');
-  if (description.length<3){ suggestionsDiv.innerHTML=''; return; }
+    function generateCodeSuggestions() {
+      const description = document.getElementById('new-code-description').value.trim();
+      const suggestionsDiv = document.getElementById('code-suggestions');
+      if (description.length < 3) { suggestionsDiv.innerHTML = ''; return; }
 
-  const suggestions = createCodeSuggestions(description);
-  suggestionsDiv.innerHTML = `
+      const suggestions = createCodeSuggestions(description);
+      suggestionsDiv.innerHTML = `
     <h5 style="color:#2d3748;margin-bottom:1rem;">Suggested Unique Codes:</h5>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
-    ${suggestions.map((s)=>`
+    ${suggestions.map((s) => `
       <div class="code-suggestion" data-code="${s.code}"
            style="padding:1rem;border:2px solid #e2e8f0;border-radius:6px;cursor:pointer;transition:all .2s;"
-           onclick="selectCodeSuggestion('${s.code}','${description.replace(/'/g,"\\'")}')"
+           onclick="selectCodeSuggestion('${s.code}','${description.replace(/'/g, "\\'")}')"
            onmouseover="this.style.borderColor='#667eea';this.style.backgroundColor='#f7fafc';"
            onmouseout="this.style.borderColor='#e2e8f0';this.style.backgroundColor='white';">
         <div style="font-weight:600;color:#2d3748;margin-bottom:.5rem;font-family:monospace;font-size:1.1rem;">${s.code}</div>
         <div style="font-size:.9rem;color:#718096;margin-bottom:.5rem;">${s.explanation}</div>
-        <div style="font-size:.8rem;color:#a0aec0;">Length: ${s.code.length} ${!codeExists(s.code)?' • ✅ Available':' • ❌ Already exists'}</div>
+        <div style="font-size:.8rem;color:#a0aec0;">Length: ${s.code.length} ${!codeExists(s.code) ? ' • ✅ Available' : ' • ❌ Already exists'}</div>
       </div>
     `).join('')}
     </div>
   `;
-}
-
-
-function sanitizeCode(code){
-  return (code || '')
-    .toUpperCase()
-    .replace(/[^A-Z0-9]/g, '')
-    .substring(0, 10);
-}
-
-function generateRandomSuffix(length = 4){
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let out = '';
-  for (let i = 0; i < length; i++){
-    out += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return out;
-}
-
-function codeExistsInSelectedCodelist(code){
-  if (!selectedCodelist) return false;
-  const check = (code || '').toUpperCase();
-  return selectedCodelist.codes.some(ec =>
-    pick(ec,'Code_Value','CODE_Value','CODE_VALUE','Code','CODE').toUpperCase() === check
-  );
-}
-
-function codeExistsAnywhere(code){
-  const check = (code || '').toUpperCase();
-
-  return allMasterCodeValues.has(check) || codelists.some(cl =>
-    cl.codes.some(ec =>
-      pick(
-        ec,
-        'Code_Value',
-        'CODE_Value',
-        'CODE_VALUE',
-        'Code',
-        'CODE'
-      ).toUpperCase() === check
-    )
-  );
-}
-
-function codeExists(code){
-  return codeExistsAnywhere(code);
-}
-
-function makeUniqueCode(baseCode, fallbackPrefix = 'CD'){
-  const cleanBase = sanitizeCode(baseCode);
-
-  if (cleanBase && !codeExistsAnywhere(cleanBase)) {
-    return cleanBase;
-  }
-
-  const prefix = sanitizeCode(fallbackPrefix).substring(0, 6) || 'CD';
-
-  for (let i = 0; i < 200; i++){
-    const randomCode = sanitizeCode((prefix + generateRandomSuffix(4)).substring(0, 10));
-    if (randomCode && !codeExistsAnywhere(randomCode)) {
-      return randomCode;
-    }
-  }
-
-  const ts = Date.now().toString().slice(-6);
-  return sanitizeCode((prefix + ts).substring(0, 10));
-}
-
-function createCodeSuggestions(description){
-  const words = description.toUpperCase().split(/\s+/).filter(Boolean);
-
-  const acronymBase = sanitizeCode(
-    words.map(w => w.charAt(0)).join('').substring(0, 6)
-  );
-
-  let smartBase = '';
-  if (words.length === 1){
-    smartBase = sanitizeCode(words[0].substring(0, 10));
-  } else if (words.length === 2){
-    smartBase = sanitizeCode(
-      (words[0].substring(0, 5) + words[1].substring(0, 5)).substring(0, 10)
-    );
-  } else {
-    smartBase = sanitizeCode(
-      words.map((w, i) => i < 2 ? w.substring(0, 3) : w.charAt(0)).join('').substring(0, 10)
-    );
-  }
-
-  const results = [];
-  const used = new Set();
-
-  function pushSuggestion(preferredCode, explanation, fallbackPrefix){
-    let finalCode = preferredCode;
-
-    if (!finalCode || codeExistsAnywhere(finalCode) || used.has(finalCode)){
-      finalCode = makeUniqueCode(fallbackPrefix, fallbackPrefix);
-      explanation += ' (preferred code already existed, so a unique random code was generated)';
     }
 
-    if (!used.has(finalCode)){
-      used.add(finalCode);
-      results.push({
-        code: finalCode,
-        explanation
+
+    function sanitizeCode(code) {
+      return (code || '')
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, '')
+        .substring(0, 10);
+    }
+
+    function generateRandomSuffix(length = 4) {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let out = '';
+      for (let i = 0; i < length; i++) {
+        out += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return out;
+    }
+
+    function codeExistsInSelectedCodelist(code) {
+      if (!selectedCodelist) return false;
+      const check = (code || '').toUpperCase();
+      return selectedCodelist.codes.some(ec =>
+        pick(ec, 'Code_Value', 'CODE_Value', 'CODE_VALUE', 'Code', 'CODE').toUpperCase() === check
+      );
+    }
+
+    function codeExistsAnywhere(code) {
+      const check = (code || '').toUpperCase();
+
+      return allMasterCodeValues.has(check) || codelists.some(cl =>
+        cl.codes.some(ec =>
+          pick(
+            ec,
+            'Code_Value',
+            'CODE_Value',
+            'CODE_VALUE',
+            'Code',
+            'CODE'
+          ).toUpperCase() === check
+        )
+      );
+    }
+
+    function codeExists(code) {
+      return codeExistsAnywhere(code);
+    }
+
+    function makeUniqueCode(baseCode, fallbackPrefix = 'CD') {
+      const cleanBase = sanitizeCode(baseCode);
+
+      if (cleanBase && !codeExistsAnywhere(cleanBase)) {
+        return cleanBase;
+      }
+
+      const prefix = sanitizeCode(fallbackPrefix).substring(0, 6) || 'CD';
+
+      for (let i = 0; i < 200; i++) {
+        const randomCode = sanitizeCode((prefix + generateRandomSuffix(4)).substring(0, 10));
+        if (randomCode && !codeExistsAnywhere(randomCode)) {
+          return randomCode;
+        }
+      }
+
+      const ts = Date.now().toString().slice(-6);
+      return sanitizeCode((prefix + ts).substring(0, 10));
+    }
+
+    function createCodeSuggestions(description) {
+      const words = description.toUpperCase().split(/\s+/).filter(Boolean);
+
+      const acronymBase = sanitizeCode(
+        words.map(w => w.charAt(0)).join('').substring(0, 6)
+      );
+
+      let smartBase = '';
+      if (words.length === 1) {
+        smartBase = sanitizeCode(words[0].substring(0, 10));
+      } else if (words.length === 2) {
+        smartBase = sanitizeCode(
+          (words[0].substring(0, 5) + words[1].substring(0, 5)).substring(0, 10)
+        );
+      } else {
+        smartBase = sanitizeCode(
+          words.map((w, i) => i < 2 ? w.substring(0, 3) : w.charAt(0)).join('').substring(0, 10)
+        );
+      }
+
+      const results = [];
+      const used = new Set();
+
+      function pushSuggestion(preferredCode, explanation, fallbackPrefix) {
+        let finalCode = preferredCode;
+
+        if (!finalCode || codeExistsAnywhere(finalCode) || used.has(finalCode)) {
+          finalCode = makeUniqueCode(fallbackPrefix, fallbackPrefix);
+          explanation += ' (preferred code already existed, so a unique random code was generated)';
+        }
+
+        if (!used.has(finalCode)) {
+          used.add(finalCode);
+          results.push({
+            code: finalCode,
+            explanation
+          });
+        }
+      }
+
+      pushSuggestion(
+        acronymBase,
+        'First-letter acronym',
+        acronymBase || 'AC'
+      );
+
+      pushSuggestion(
+        smartBase,
+        'Abbreviation using word parts',
+        smartBase || acronymBase || 'CD'
+      );
+
+      return results;
+    }
+
+
+    function selectCodeSuggestion(code, description) {
+      selectedNewCode = { code, description };
+      document.querySelectorAll('.code-suggestion').forEach(i => { i.style.borderColor = '#e2e8f0'; i.style.backgroundColor = '#fff'; });
+      const sel = document.querySelector(`[data-code="${code}"]`);
+      if (sel) { sel.style.borderColor = '#48bb78'; sel.style.backgroundColor = '#f0fff4'; }
+
+      // Selecting a generated suggestion is now treated as the add action.
+      // This keeps the create-new-code workflow consistent with the copy workflow.
+      addNewCodeToCodelist({ skipUserInfo: true });
+    }
+
+    /* -------------------- Add new code -------------------- */
+
+    function addNewCodeToCodelist(options = {}) {
+      const userNameEl = document.getElementById('user-name');
+      const userOrganisationEl = document.getElementById('user-organisation');
+      const userCommentsEl = document.getElementById('user-comments');
+      const userEmailEl = document.getElementById('user-email');
+
+      const userName = userNameEl ? userNameEl.value.trim() : '';
+      const userOrganisation = userOrganisationEl ? userOrganisationEl.value.trim() : '';
+      const userComments = userCommentsEl ? userCommentsEl.value.trim() : '';
+      const userEmail = userEmailEl ? userEmailEl.value.trim() : '';
+
+      // User details are optional while users are still making changes.
+      // If they enter an email at this stage, validate it; otherwise collect details before final email send.
+      if (userEmail && !isValidEmail(userEmail)) {
+        alert('Please enter a valid email address to receive a confirmation.');
+        return;
+      }
+
+      if (userName) lastUserName = userName;
+      if (userEmail) lastUserEmail = userEmail;
+      if (userOrganisation) lastUserOrganisation = userOrganisation;
+      if (userEmail) lastUserWantsConfirm = true;
+
+      if (!selectedNewCode) {
+        alert('Please select a code suggestion first.');
+        return;
+      }
+
+      const defaultSpecForCodelist =
+        pick(
+          selectedCodelist.codes.find(r => pick(r, 'Spec', 'SPEC')) || {},
+          'Spec',
+          'SPEC'
+        ) || (selectedCodelist.specs && selectedCodelist.specs[0]) || '';
+
+      const newCodeEntry = {
+        'Spec': defaultSpecForCodelist,
+        'Code_Value': selectedNewCode.code,
+        'Description': selectedNewCode.description,
+        'Codelist_Name': selectedCodelist.name,
+        'Comment': userComments,
+        'Date_Modified': formatDate(new Date()),
+        'Added_By': userName || lastUserName || '',
+        'Organisation': userOrganisation || lastUserOrganisation || '',
+        'Status': 'Active',
+        'Added - A, Modified - M, Removed - R': 'A'
+      };
+
+      if (codeExistsInSelectedCodelist(newCodeEntry.Code_Value)) {
+        alert(`Code "${newCodeEntry.Code_Value}" already exists in "${selectedCodelist.name}". No need to add it again.`);
+        return;
+      }
+
+      selectedCodelist.codes.push(newCodeEntry);
+      sessionChanges.push({
+        type: 'added',
+        code: newCodeEntry.Code_Value,
+        description: newCodeEntry.Description,
+        codelist: selectedCodelist.name,
+        timestamp: new Date().toISOString(),
+        addedBy: userName || lastUserName || '',
+        organisation: userOrganisation || lastUserOrganisation || '',
+        requesterEmail: userEmail || lastUserEmail || '',
+        comments: userComments,
+        entryRef: newCodeEntry
       });
+
+      const existingList = document.getElementById('existing-codes-list');
+      if (existingList) existingList.innerHTML = displayExistingCodes();
+
+      const autoSec = document.getElementById('create-auto-section');
+      const manSec = document.getElementById('create-manual-section');
+      const userSec = document.getElementById('user-info-section');
+      if (autoSec) autoSec.style.display = 'none';
+      if (manSec) manSec.style.display = 'none';
+      if (userSec) userSec.style.display = 'none';
+
+      const newDesc = document.getElementById('new-code-description');
+      if (newDesc) newDesc.value = '';
+
+      const n1 = document.getElementById('manual-code-name');
+      if (n1) n1.value = '';
+      const n2 = document.getElementById('manual-code-description');
+      if (n2) n2.value = '';
+
+      selectedNewCode = null;
+
+      askForMoreChanges();
     }
-  }
 
-  pushSuggestion(
-    acronymBase,
-    'First-letter acronym',
-    acronymBase || 'AC'
-  );
-
-  pushSuggestion(
-    smartBase,
-    'Abbreviation using word parts',
-    smartBase || acronymBase || 'CD'
-  );
-
-  return results;
-}
-
-
-function selectCodeSuggestion(code, description){
-  selectedNewCode = {code, description};
-  document.querySelectorAll('.code-suggestion').forEach(i=>{i.style.borderColor='#e2e8f0';i.style.backgroundColor='#fff';});
-  const sel = document.querySelector(`[data-code="${code}"]`);
-  if (sel){ sel.style.borderColor='#48bb78'; sel.style.backgroundColor='#f0fff4'; }
-
-  // Selecting a generated suggestion is now treated as the add action.
-  // This keeps the create-new-code workflow consistent with the copy workflow.
-  addNewCodeToCodelist({ skipUserInfo: true });
-}
-
-/* -------------------- Add new code -------------------- */
-
-function addNewCodeToCodelist(options = {}){
-  const userNameEl = document.getElementById('user-name');
-  const userOrganisationEl = document.getElementById('user-organisation');
-  const userCommentsEl = document.getElementById('user-comments');
-  const userEmailEl = document.getElementById('user-email');
-
-  const userName = userNameEl ? userNameEl.value.trim() : '';
-  const userOrganisation = userOrganisationEl ? userOrganisationEl.value.trim() : '';
-  const userComments = userCommentsEl ? userCommentsEl.value.trim() : '';
-  const userEmail = userEmailEl ? userEmailEl.value.trim() : '';
-
-  // User details are optional while users are still making changes.
-  // If they enter an email at this stage, validate it; otherwise collect details before final email send.
-  if (userEmail && !isValidEmail(userEmail)) {
-    alert('Please enter a valid email address to receive a confirmation.');
-    return;
-  }
-
-  if (userName) lastUserName = userName;
-  if (userEmail) lastUserEmail = userEmail;
-  if (userOrganisation) lastUserOrganisation = userOrganisation;
-  if (userEmail) lastUserWantsConfirm = true;
-
-  if (!selectedNewCode){
-    alert('Please select a code suggestion first.');
-    return;
-  }
-
-  const defaultSpecForCodelist =
-    pick(
-      selectedCodelist.codes.find(r => pick(r, 'Spec', 'SPEC')) || {},
-      'Spec',
-      'SPEC'
-    ) || (selectedCodelist.specs && selectedCodelist.specs[0]) || '';
-
-  const newCodeEntry = {
-    'Spec': defaultSpecForCodelist,
-    'Code_Value': selectedNewCode.code,
-    'Description': selectedNewCode.description,
-    'Codelist_Name': selectedCodelist.name,
-    'Comment': userComments,
-    'Date_Modified': formatDate(new Date()),
-    'Added_By': userName || lastUserName || '',
-    'Organisation': userOrganisation || lastUserOrganisation || '',
-    'Status': 'Active',
-    'Added - A, Modified - M, Removed - R': 'A'
-  };
-
-  if (codeExistsInSelectedCodelist(newCodeEntry.Code_Value)){
-    alert(`Code "${newCodeEntry.Code_Value}" already exists in "${selectedCodelist.name}". No need to add it again.`);
-    return;
-  }
-
-  selectedCodelist.codes.push(newCodeEntry);
-  sessionChanges.push({
-    type:'added',
-    code:newCodeEntry.Code_Value,
-    description:newCodeEntry.Description,
-    codelist:selectedCodelist.name,
-    timestamp:new Date().toISOString(),
-    addedBy:userName || lastUserName || '',
-    organisation:userOrganisation || lastUserOrganisation || '',
-    requesterEmail:userEmail || lastUserEmail || '',
-    comments:userComments,
-    entryRef:newCodeEntry
-  });
-
-  const existingList = document.getElementById('existing-codes-list');
-  if (existingList) existingList.innerHTML = displayExistingCodes();
-
-  const autoSec = document.getElementById('create-auto-section');
-  const manSec  = document.getElementById('create-manual-section');
-  const userSec = document.getElementById('user-info-section');
-  if (autoSec) autoSec.style.display='none';
-  if (manSec) manSec.style.display='none';
-  if (userSec) userSec.style.display='none';
-
-  const newDesc = document.getElementById('new-code-description');
-  if (newDesc) newDesc.value='';
-
-  const n1 = document.getElementById('manual-code-name');
-  if(n1) n1.value='';
-  const n2 = document.getElementById('manual-code-description');
-  if(n2) n2.value='';
-
-  selectedNewCode = null;
-
-  askForMoreChanges();
-}
-
-function showCodeAddedSuccess(newCodeEntry){
-  const msg=document.createElement('div');
-  msg.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#f0fff4;border:2px solid #48bb78;padding:2rem;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.2);z-index:1000;text-align:center;';
-  msg.innerHTML=`
+    function showCodeAddedSuccess(newCodeEntry) {
+      const msg = document.createElement('div');
+      msg.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#f0fff4;border:2px solid #48bb78;padding:2rem;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.2);z-index:1000;text-align:center;';
+      msg.innerHTML = `
     <h3 style="color:#22543d;margin-bottom:1rem;">✅ Code Added Successfully!</h3>
     <p style="color:#2f855a;margin-bottom:1rem;"><strong>${newCodeEntry.Code_Value}</strong> has been added to <strong>${selectedCodelist.name}</strong></p>
     <div style="font-size:.9rem;color:#2f855a;margin-bottom:1.5rem;">Total changes this session: ${sessionChanges.length}</div>
     <button id="continue-after-success" style="padding:.5rem 1.2rem;background:#667eea;color:#fff;border:none;border-radius:5px;cursor:pointer;">Continue</button>
   `;
-  document.body.appendChild(msg);
-  document.getElementById('continue-after-success').onclick=function(){
-    msg.remove(); askForMoreChanges();
-  };
-}
+      document.body.appendChild(msg);
+      document.getElementById('continue-after-success').onclick = function () {
+        msg.remove(); askForMoreChanges();
+      };
+    }
 
-/* -------------------- Finish / email flow -------------------- */
+    /* -------------------- Finish / email flow -------------------- */
 
-function editSessionChange(idx) {
-  const ch = sessionChanges[idx];
-  const editDiv = document.getElementById(`modal-edit-${idx}`);
-  if (!editDiv) return;
+    function editSessionChange(idx) {
+      const ch = sessionChanges[idx];
+      const editDiv = document.getElementById(`modal-edit-${idx}`);
+      if (!editDiv) return;
 
-  // Toggle off if already open
-  if (editDiv.style.display === 'block') {
-    editDiv.style.display = 'none';
-    return;
-  }
+      // Toggle off if already open
+      if (editDiv.style.display === 'block') {
+        editDiv.style.display = 'none';
+        return;
+      }
 
-  editDiv.style.display = 'block';
-  editDiv.innerHTML = `
+      editDiv.style.display = 'block';
+      editDiv.innerHTML = `
     <div style="background:#f0f4ff;border:1px solid #c3d0f5;border-radius:6px;padding:.75rem;">
       <div style="margin-bottom:.5rem;">
         <label style="font-size:.82rem;color:#4a5568;font-weight:600;display:block;margin-bottom:.25rem;">Code (max 10 chars, no spaces):</label>
@@ -1141,7 +1393,7 @@ function editSessionChange(idx) {
       </div>
       <div style="margin-bottom:.6rem;">
         <label style="font-size:.82rem;color:#4a5568;font-weight:600;display:block;margin-bottom:.25rem;">Description:</label>
-        <input id="edit-desc-${idx}" type="text" value="${ch.description.replace(/"/g,'&quot;')}"
+        <input id="edit-desc-${idx}" type="text" value="${ch.description.replace(/"/g, '&quot;')}"
           style="width:100%;padding:.4rem .5rem;border:1px solid #c3d0f5;border-radius:4px;"/>
       </div>
       <div style="display:flex;gap:.5rem;">
@@ -1150,55 +1402,55 @@ function editSessionChange(idx) {
       </div>
       <div id="edit-msg-${idx}" style="margin-top:.4rem;font-size:.82rem;"></div>
     </div>`;
-}
+    }
 
-function saveSessionChange(idx) {
-  const ch = sessionChanges[idx];
-  const newCode = (document.getElementById(`edit-code-${idx}`).value || '').trim().toUpperCase();
-  const newDesc = (document.getElementById(`edit-desc-${idx}`).value || '').trim();
-  const msg = document.getElementById(`edit-msg-${idx}`);
+    function saveSessionChange(idx) {
+      const ch = sessionChanges[idx];
+      const newCode = (document.getElementById(`edit-code-${idx}`).value || '').trim().toUpperCase();
+      const newDesc = (document.getElementById(`edit-desc-${idx}`).value || '').trim();
+      const msg = document.getElementById(`edit-msg-${idx}`);
 
-  if (!newCode) { msg.innerHTML = '<span style="color:#c53030;">Code cannot be empty.</span>'; return; }
-  if (newCode.length > 10) { msg.innerHTML = '<span style="color:#c53030;">Max 10 characters.</span>'; return; }
-  if (!newDesc) { msg.innerHTML = '<span style="color:#c53030;">Description cannot be empty.</span>'; return; }
+      if (!newCode) { msg.innerHTML = '<span style="color:#c53030;">Code cannot be empty.</span>'; return; }
+      if (newCode.length > 10) { msg.innerHTML = '<span style="color:#c53030;">Max 10 characters.</span>'; return; }
+      if (!newDesc) { msg.innerHTML = '<span style="color:#c53030;">Description cannot be empty.</span>'; return; }
 
-  // Check uniqueness only if code actually changed
-  if (newCode !== ch.code && codeExistsAnywhere(newCode)) {
-    msg.innerHTML = '<span style="color:#c53030;">That code already exists in the master codelist.</span>';
-    return;
-  }
+      // Check uniqueness only if code actually changed
+      if (newCode !== ch.code && codeExistsAnywhere(newCode)) {
+        msg.innerHTML = '<span style="color:#c53030;">That code already exists in the master codelist.</span>';
+        return;
+      }
 
-  // Update session change
-  ch.code = newCode;
-  ch.description = newDesc;
+      // Update session change
+      ch.code = newCode;
+      ch.description = newDesc;
 
-  // Update the underlying codelist entry too
-  if (ch.entryRef) {
-    ch.entryRef.Code_Value = newCode;
-    ch.entryRef.Description = newDesc;
-  }
+      // Update the underlying codelist entry too
+      if (ch.entryRef) {
+        ch.entryRef.Code_Value = newCode;
+        ch.entryRef.Description = newDesc;
+      }
 
-  // Update the displayed text in the modal
-  const codeEl = document.getElementById(`modal-code-${idx}`);
-  const descEl = document.getElementById(`modal-desc-${idx}`);
-  if (codeEl) codeEl.textContent = newCode;
-  if (descEl) descEl.textContent = newDesc;
+      // Update the displayed text in the modal
+      const codeEl = document.getElementById(`modal-code-${idx}`);
+      const descEl = document.getElementById(`modal-desc-${idx}`);
+      if (codeEl) codeEl.textContent = newCode;
+      if (descEl) descEl.textContent = newDesc;
 
-  document.getElementById(`modal-edit-${idx}`).style.display = 'none';
-}
+      document.getElementById(`modal-edit-${idx}`).style.display = 'none';
+    }
 
-function askForMoreChanges(){
-  const modal=document.createElement('div');
-  modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:10000;display:flex;justify-content:center;align-items:center;';
-  const content=document.createElement('div');
-  content.style.cssText='background:#fff;padding:2rem;border-radius:12px;max-width:600px;box-shadow:0 20px 40px rgba(0,0,0,.3);text-align:center;';
-  content.innerHTML=`
+    function askForMoreChanges() {
+      const modal = document.createElement('div');
+      modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:10000;display:flex;justify-content:center;align-items:center;';
+      const content = document.createElement('div');
+      content.style.cssText = 'background:#fff;padding:2rem;border-radius:12px;max-width:600px;box-shadow:0 20px 40px rgba(0,0,0,.3);text-align:center;';
+      content.innerHTML = `
     <h2 style="color:#2d3748;margin-bottom:1.5rem;"><span style="background:#e0eaff;border-radius:6px;padding:.15em .45em;font-size:1.2em;margin-right:.5em;">🔄</span>Continue Making Changes?</h2>
     <div style="background:#f7fafc;border-radius:8px;padding:1rem;margin-bottom:1.5rem;text-align:left;">
       <h4 style="color:#2d3748;margin-bottom:.75rem;">Changes Made This Session:</h4>
-      ${sessionChanges.length===0
-        ? `<div style="color:#a0aec0;">No changes made yet.</div>`
-        : sessionChanges.map((ch, idx)=>`
+      ${sessionChanges.length === 0
+          ? `<div style="color:#a0aec0;">No changes made yet.</div>`
+          : sessionChanges.map((ch, idx) => `
           <div style="margin-bottom:.6rem;padding:.5rem .8rem;background:#fff;border-radius:5px;border-left:4px solid #48bb78;">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;">
               <div>
@@ -1217,43 +1469,43 @@ function askForMoreChanges(){
       <button onclick="finalizeAndSendEmail()" style="padding:.75rem 1.5rem;background:#48bb78;color:#fff;border:none;border-radius:6px;cursor:pointer;">📧 Send Email Notification</button>
     </div>
   `;
-  modal.className='changes-modal';
-  modal.appendChild(content);
-  document.body.appendChild(modal);
-  window.continueChanges=()=>{modal.remove();};
-  window.finalizeAndSendEmail=()=>{modal.remove();validateUserInfoAndSend();};
-}
-
-function applyUserInfoToSessionChanges(userName, userOrganisation, userEmail, userComments){
-  lastUserName = userName;
-  lastUserOrganisation = userOrganisation;
-  lastUserEmail = userEmail;
-  lastUserWantsConfirm = true;
-
-  sessionChanges.forEach(ch => {
-    ch.addedBy = userName;
-    ch.organisation = userOrganisation;
-    ch.requesterEmail = userEmail;
-    if (userComments && !ch.comments) ch.comments = userComments;
-    if (ch.entryRef) {
-      ch.entryRef.Added_By = userName;
-      ch.entryRef.Organisation = userOrganisation;
-      if (userComments && !ch.entryRef.Comment) ch.entryRef.Comment = userComments;
+      modal.className = 'changes-modal';
+      modal.appendChild(content);
+      document.body.appendChild(modal);
+      window.continueChanges = () => { modal.remove(); };
+      window.finalizeAndSendEmail = () => { modal.remove(); validateUserInfoAndSend(); };
     }
-  });
-}
 
-function validateUserInfoAndSend(){
-  if (lastUserName && lastUserOrganisation && isValidEmail(lastUserEmail)) {
-    sendBatchEmailNotification();
-    return;
-  }
+    function applyUserInfoToSessionChanges(userName, userOrganisation, userEmail, userComments) {
+      lastUserName = userName;
+      lastUserOrganisation = userOrganisation;
+      lastUserEmail = userEmail;
+      lastUserWantsConfirm = true;
 
-  const modal=document.createElement('div');
-  modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:10000;display:flex;justify-content:center;align-items:center;';
-  const content=document.createElement('div');
-  content.style.cssText='background:#fff;padding:2rem;border-radius:12px;max-width:640px;width:92%;box-shadow:0 20px 40px rgba(0,0,0,.3);';
-  content.innerHTML=`
+      sessionChanges.forEach(ch => {
+        ch.addedBy = userName;
+        ch.organisation = userOrganisation;
+        ch.requesterEmail = userEmail;
+        if (userComments && !ch.comments) ch.comments = userComments;
+        if (ch.entryRef) {
+          ch.entryRef.Added_By = userName;
+          ch.entryRef.Organisation = userOrganisation;
+          if (userComments && !ch.entryRef.Comment) ch.entryRef.Comment = userComments;
+        }
+      });
+    }
+
+    function validateUserInfoAndSend() {
+      if (lastUserName && lastUserOrganisation && isValidEmail(lastUserEmail)) {
+        sendBatchEmailNotification();
+        return;
+      }
+
+      const modal = document.createElement('div');
+      modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:10000;display:flex;justify-content:center;align-items:center;';
+      const content = document.createElement('div');
+      content.style.cssText = 'background:#fff;padding:2rem;border-radius:12px;max-width:640px;width:92%;box-shadow:0 20px 40px rgba(0,0,0,.3);';
+      content.innerHTML = `
     <h2 style="color:#2d3748;margin-bottom:1rem;">User Information</h2>
     <p style="color:#4a5568;margin-bottom:1.25rem;line-height:1.45;">Please provide your details before sending the email notification. These details will be included in the GISSA notification and your confirmation email.</p>
 
@@ -1279,58 +1531,58 @@ function validateUserInfoAndSend(){
       <button id="final-user-continue" style="padding:.75rem 1.2rem;background:#48bb78;color:#fff;border:none;border-radius:6px;cursor:pointer;">Continue to Email Preview</button>
     </div>
   `;
-  modal.appendChild(content);
-  document.body.appendChild(modal);
+      modal.appendChild(content);
+      document.body.appendChild(modal);
 
-  content.querySelector('#final-user-back').onclick = function(){
-    modal.remove();
-    askForMoreChanges();
-  };
-  content.querySelector('#final-user-continue').onclick = function(){
-    const userName = document.getElementById('final-user-name').value.trim();
-    const userOrganisation = document.getElementById('final-user-organisation').value.trim();
-    const userEmail = document.getElementById('final-user-email').value.trim();
-    const userComments = document.getElementById('final-user-comments').value.trim();
-    const msg = document.getElementById('final-user-msg');
+      content.querySelector('#final-user-back').onclick = function () {
+        modal.remove();
+        askForMoreChanges();
+      };
+      content.querySelector('#final-user-continue').onclick = function () {
+        const userName = document.getElementById('final-user-name').value.trim();
+        const userOrganisation = document.getElementById('final-user-organisation').value.trim();
+        const userEmail = document.getElementById('final-user-email').value.trim();
+        const userComments = document.getElementById('final-user-comments').value.trim();
+        const msg = document.getElementById('final-user-msg');
 
-    if (!userName) {
-      msg.innerHTML = '<div style="color:#c53030;">Please enter your name or user ID.</div>';
-      return;
+        if (!userName) {
+          msg.innerHTML = '<div style="color:#c53030;">Please enter your name or user ID.</div>';
+          return;
+        }
+        if (!userOrganisation) {
+          msg.innerHTML = '<div style="color:#c53030;">Please enter your organisation.</div>';
+          return;
+        }
+        if (!isValidEmail(userEmail)) {
+          msg.innerHTML = '<div style="color:#c53030;">Please enter a valid email address.</div>';
+          return;
+        }
+
+        applyUserInfoToSessionChanges(userName, userOrganisation, userEmail, userComments);
+        modal.remove();
+        sendBatchEmailNotification();
+      };
     }
-    if (!userOrganisation) {
-      msg.innerHTML = '<div style="color:#c53030;">Please enter your organisation.</div>';
-      return;
-    }
-    if (!isValidEmail(userEmail)) {
-      msg.innerHTML = '<div style="color:#c53030;">Please enter a valid email address.</div>';
-      return;
+
+    async function sendBatchEmailNotification() {
+      const userName = lastUserName || sessionChanges.find(c => c.addedBy)?.addedBy || 'System User';
+      await sendEmailNotification(null, userName, sessionChanges);
     }
 
-    applyUserInfoToSessionChanges(userName, userOrganisation, userEmail, userComments);
-    modal.remove();
-    sendBatchEmailNotification();
-  };
-}
+    async function sendEmailNotification(newCodeEntry, userName, changes = null) {
+      const arr = changes || [{
+        code: newCodeEntry.Code_Value,
+        description: newCodeEntry.Description,
+        codelist: selectedCodelist.name,
+        type: 'added'
+      }];
 
-async function sendBatchEmailNotification(){
-  const userName = lastUserName || sessionChanges.find(c=>c.addedBy)?.addedBy || 'System User';
-  await sendEmailNotification(null, userName, sessionChanges);
-}
-
-async function sendEmailNotification(newCodeEntry, userName, changes=null){
-  const arr = changes || [{
-    code:newCodeEntry.Code_Value,
-    description:newCodeEntry.Description,
-    codelist:selectedCodelist.name,
-    type:'added'
-  }];
-
-  const updatedExcelBlob = await generateUpdatedExcelFile();
-  const d=new Date(), iso=d.toISOString().split('T')[0].replace(/-/g,'');
-  const subject = `A-SPEC New Code Update Notification - ${d.toLocaleDateString('en-AU',{year:'numeric',month:'long',day:'numeric'})}`;
-  const newTerms = arr.map(ch=>`* **${ch.code}** - ${ch.description} (${ch.codelist})`).join('\n');
-  const body =
-`Dear A-SPEC Team,
+      const updatedExcelBlob = await generateUpdatedExcelFile();
+      const d = new Date(), iso = d.toISOString().split('T')[0].replace(/-/g, '');
+      const subject = `A-SPEC New Code Update Notification - ${d.toLocaleDateString('en-AU', { year: 'numeric', month: 'long', day: 'numeric' })}`;
+      const newTerms = arr.map(ch => `* **${ch.code}** - ${ch.description} (${ch.codelist})`).join('\n');
+      const body =
+        `Dear A-SPEC Team,
 
 There has been a new code created by an A-Speccer. Here's what's changed:
 
@@ -1340,7 +1592,7 @@ ${newTerms}
 **Quick Stats**
 * **Total codes in database:** ${getTotalTermsCount()}
 * **New code/s this update:** ${arr.length}
-* **Last updated:** ${d.toLocaleDateString('en-AU',{year:'numeric',month:'long',day:'numeric'})}
+* **Last updated:** ${d.toLocaleDateString('en-AU', { year: 'numeric', month: 'long', day: 'numeric' })}
 * **Updated by:** ${userName}
 * **Organisation:** ${lastUserOrganisation || 'Not provided'}
 * **Requester email:** ${lastUserEmail || 'Not provided'}
@@ -1353,124 +1605,124 @@ If required communicate with the proposer of the new code to address any issues.
 ---
 Please Note: This is an automated notification from the A-SPEC Code Dashboard.`;
 
-  const filename = `A-SPEC CODELISTS Version ${getNextVersion()} MASTER WIP - ${iso}.xlsx`;
-  showEmailPreview(subject, body, updatedExcelBlob, filename, arr, {
-  userName,
-  userEmail: lastUserEmail,
-  userOrganisation: lastUserOrganisation,
-  wantConfirm: lastUserWantsConfirm
-});
-}
-
-function getTotalTermsCount(){
-  return codelists.reduce((t,c)=>t+c.codes.length,0);
-}
-
-/* -------------------- Export (Excel — new records only) -------------------- */
-async function generateUpdatedExcelFile(){
-  try {
-    const wb = XLSX.utils.book_new();
-
-    const columns = [
-      "Spec",
-      "Current Versions 2019 & 2023",
-      "Spec_Coverage",
-      "Codelist_Name",
-      "Code_Value",
-      "Description",
-      "Comment",
-      "Date_Modified",
-      "Added - A, Modified - M, Removed - R",
-      "Change_Author",
-      "Organisation",
-      "Authorised by (whom yyyymmdd)"
-    ];
-
-    // New records only — one row per sessionChange, NOT the full master codelist
-    const newRows = sessionChanges.map(ch => {
-      const ref = ch.entryRef || {};
-      const dateOut = normalizeDate(pick(ref,'Date_Modified','DATE_MODIFIED') || ch.timestamp || '');
-      return {
-        "Spec":                                 pick(ref,'Spec','SPEC') || '',
-        "Current Versions 2019 & 2023":         '',  // GISSA selects from dropdown
-        "Spec_Coverage":                        '',  // GISSA selects from dropdown
-        "Codelist_Name":                        ch.codelist || '',
-        "Code_Value":                           ch.code || '',
-        "Description":                          ch.description || '',
-        "Comment":                              ch.comments || pick(ref,'Comment','COMMENT','comment') || '',
-        "Date_Modified":                        dateOut,
-        "Added - A, Modified - M, Removed - R": 'A',
-        "Change_Author":                        ch.addedBy || '',
-        "Organisation":                         ch.organisation || '',
-        "Authorised by (whom yyyymmdd)":      ''   // GISSA fills manually
-      };
-    });
-
-    const ws = XLSX.utils.json_to_sheet(newRows, { header: columns });
-
-    ws['!cols'] = [
-      { wch: 8  }, { wch: 22 }, { wch: 16 }, { wch: 30 },
-      { wch: 14 }, { wch: 40 }, { wch: 30 }, { wch: 14 },
-      { wch: 10 }, { wch: 20 }, { wch: 24 }, { wch: 30 }
-    ];
-
-    XLSX.utils.book_append_sheet(wb, ws, "NEW_CODES");
-
-    const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-
-    // Inject dropdown dataValidation via JSZip
-    // (SheetJS community 0.18.5 does not support dataValidation natively)
-    if (typeof JSZip === 'undefined') {
-      console.warn('JSZip not loaded — xlsx generated without dropdowns');
-      return new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const filename = `A-SPEC CODELISTS Version ${getNextVersion()} MASTER WIP - ${iso}.xlsx`;
+      showEmailPreview(subject, body, updatedExcelBlob, filename, arr, {
+        userName,
+        userEmail: lastUserEmail,
+        userOrganisation: lastUserOrganisation,
+        wantConfirm: lastUserWantsConfirm
+      });
     }
 
-    const zip      = await JSZip.loadAsync(buf);
-    let sheetXml   = await zip.file('xl/worksheets/sheet1.xml').async('string');
+    function getTotalTermsCount() {
+      return codelists.reduce((t, c) => t + c.codes.length, 0);
+    }
 
-    // Col B → "Current Versions 2019 & 2023" : 2019 / 2023 / both
-    // Col C → "Spec_Coverage"                : DDS_EXISTING / DDS / EXISTING
-    //
-    // IMPORTANT: The OOXML schema requires <dataValidations> to appear BEFORE
-    // <ignoredErrors> (which SheetJS always emits). Inserting before </worksheet>
-    // places it after <ignoredErrors> which corrupts the file. We insert before
-    // <ignoredErrors> when present, otherwise before </worksheet>.
-    // formula1 values must use &quot; (XML entity) not raw " inside the XML.
-    const validationXml =
-      `<dataValidations count="2">` +
-        `<dataValidation type="list" allowBlank="1" showInputMessage="1" showErrorMessage="1" sqref="B2:B1000">` +
+    /* -------------------- Export (Excel — new records only) -------------------- */
+    async function generateUpdatedExcelFile() {
+      try {
+        const wb = XLSX.utils.book_new();
+
+        const columns = [
+          "Spec",
+          "Current Versions 2019 & 2023",
+          "Spec_Coverage",
+          "Codelist_Name",
+          "Code_Value",
+          "Description",
+          "Comment",
+          "Date_Modified",
+          "Added - A, Modified - M, Removed - R",
+          "Change_Author",
+          "Organisation",
+          "Authorised by (whom yyyymmdd)"
+        ];
+
+        // New records only — one row per sessionChange, NOT the full master codelist
+        const newRows = sessionChanges.map(ch => {
+          const ref = ch.entryRef || {};
+          const dateOut = normalizeDate(pick(ref, 'Date_Modified', 'DATE_MODIFIED') || ch.timestamp || '');
+          return {
+            "Spec": pick(ref, 'Spec', 'SPEC') || '',
+            "Current Versions 2019 & 2023": '',  // GISSA selects from dropdown
+            "Spec_Coverage": '',  // GISSA selects from dropdown
+            "Codelist_Name": ch.codelist || '',
+            "Code_Value": ch.code || '',
+            "Description": ch.description || '',
+            "Comment": ch.comments || pick(ref, 'Comment', 'COMMENT', 'comment') || '',
+            "Date_Modified": dateOut,
+            "Added - A, Modified - M, Removed - R": 'A',
+            "Change_Author": ch.addedBy || '',
+            "Organisation": ch.organisation || '',
+            "Authorised by (whom yyyymmdd)": ''   // GISSA fills manually
+          };
+        });
+
+        const ws = XLSX.utils.json_to_sheet(newRows, { header: columns });
+
+        ws['!cols'] = [
+          { wch: 8 }, { wch: 22 }, { wch: 16 }, { wch: 30 },
+          { wch: 14 }, { wch: 40 }, { wch: 30 }, { wch: 14 },
+          { wch: 10 }, { wch: 20 }, { wch: 24 }, { wch: 30 }
+        ];
+
+        XLSX.utils.book_append_sheet(wb, ws, "NEW_CODES");
+
+        const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+
+        // Inject dropdown dataValidation via JSZip
+        // (SheetJS community 0.18.5 does not support dataValidation natively)
+        if (typeof JSZip === 'undefined') {
+          console.warn('JSZip not loaded — xlsx generated without dropdowns');
+          return new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        }
+
+        const zip = await JSZip.loadAsync(buf);
+        let sheetXml = await zip.file('xl/worksheets/sheet1.xml').async('string');
+
+        // Col B → "Current Versions 2019 & 2023" : 2019 / 2023 / both
+        // Col C → "Spec_Coverage"                : DDS_EXISTING / DDS / EXISTING
+        //
+        // IMPORTANT: The OOXML schema requires <dataValidations> to appear BEFORE
+        // <ignoredErrors> (which SheetJS always emits). Inserting before </worksheet>
+        // places it after <ignoredErrors> which corrupts the file. We insert before
+        // <ignoredErrors> when present, otherwise before </worksheet>.
+        // formula1 values must use &quot; (XML entity) not raw " inside the XML.
+        const validationXml =
+          `<dataValidations count="2">` +
+          `<dataValidation type="list" allowBlank="1" showInputMessage="1" showErrorMessage="1" sqref="B2:B1000">` +
           `<formula1>&quot;2019,2023,both&quot;</formula1>` +
-        `</dataValidation>` +
-        `<dataValidation type="list" allowBlank="1" showInputMessage="1" showErrorMessage="1" sqref="C2:C1000">` +
+          `</dataValidation>` +
+          `<dataValidation type="list" allowBlank="1" showInputMessage="1" showErrorMessage="1" sqref="C2:C1000">` +
           `<formula1>&quot;DDS_EXISTING,DDS,EXISTING&quot;</formula1>` +
-        `</dataValidation>` +
-      `</dataValidations>`;
+          `</dataValidation>` +
+          `</dataValidations>`;
 
-    if (sheetXml.includes('<ignoredErrors>')) {
-      sheetXml = sheetXml.replace('<ignoredErrors>', validationXml + '<ignoredErrors>');
-    } else {
-      sheetXml = sheetXml.replace('</worksheet>', validationXml + '</worksheet>');
+        if (sheetXml.includes('<ignoredErrors>')) {
+          sheetXml = sheetXml.replace('<ignoredErrors>', validationXml + '<ignoredErrors>');
+        } else {
+          sheetXml = sheetXml.replace('</worksheet>', validationXml + '</worksheet>');
+        }
+
+        zip.file('xl/worksheets/sheet1.xml', sheetXml);
+
+        const patchedBuf = await zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' });
+        return new Blob([patchedBuf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+      } catch (e) {
+        console.error('Error generating Excel:', e);
+        return null;
+      }
     }
 
-    zip.file('xl/worksheets/sheet1.xml', sheetXml);
-
-    const patchedBuf = await zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' });
-    return new Blob([patchedBuf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-
-  } catch(e) {
-    console.error('Error generating Excel:', e);
-    return null;
-  }
-}
-
-/* -------------------- Email preview & send -------------------- */
-function showEmailPreview(subject, body, excelBlob, filename, changes, opts = {}){
-  const { userName = 'User', userEmail = '', userOrganisation = '', wantConfirm = false } = opts;
-  const modal=document.createElement('div');
-  modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:10000;display:flex;justify-content:center;align-items:center;';
-  const content=document.createElement('div');
-  content.style.cssText='background:#fff;padding:2rem;border-radius:12px;max-width:800px;max-height:80vh;overflow-y:auto;box-shadow:0 20px 40px rgba(0,0,0,.3);';
-  content.innerHTML=`
+    /* -------------------- Email preview & send -------------------- */
+    function showEmailPreview(subject, body, excelBlob, filename, changes, opts = {}) {
+      const { userName = 'User', userEmail = '', userOrganisation = '', wantConfirm = false } = opts;
+      const modal = document.createElement('div');
+      modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:10000;display:flex;justify-content:center;align-items:center;';
+      const content = document.createElement('div');
+      content.style.cssText = 'background:#fff;padding:2rem;border-radius:12px;max-width:800px;max-height:80vh;overflow-y:auto;box-shadow:0 20px 40px rgba(0,0,0,.3);';
+      content.innerHTML = `
     <h2 style="color:#000;margin-bottom:1.5rem;border-bottom:2px solid #667eea;padding-bottom:.5rem;">📧 Email Notification Preview</h2>
     <div style="margin-bottom:1.5rem;padding:1rem;background:#f7fafc;border-radius:8px;color:#000;">
       <strong>To:</strong> info@gissa.com.au<br>
@@ -1480,45 +1732,45 @@ function showEmailPreview(subject, body, excelBlob, filename, changes, opts = {}
     <div style="background:#f9f9f9;border:1px solid #e2e8f0;border-radius:8px;padding:1.5rem;margin-bottom:2rem;white-space:pre-line;font-family:'Courier New',monospace;font-size:.9rem;line-height:1.4;color:#000;">${body}</div>
     <div style="margin-bottom:1.5rem;padding:1rem;background:#ebf8ff;border-radius:8px;color:#000;">
       <h4 style="margin-bottom:.5rem;">📊 Session Summary:</h4>
-      <p><strong>Total changes:</strong> ${changes?changes.length:1}</p>
+      <p><strong>Total changes:</strong> ${changes ? changes.length : 1}</p>
       <p><strong>Submitted by:</strong> ${userName}</p>
       <p><strong>Organisation:</strong> ${userOrganisation || 'Not provided'}</p>
       <p><strong>Requester email:</strong> ${userEmail || 'Not provided'}</p>
       <p><strong>File version:</strong> ${filename}</p>
-      <p><strong>Codelists affected:</strong> ${changes ? [...new Set(changes.map(c=>c.codelist))].join(', ') : (selectedCodelist?selectedCodelist.name:'')}</p>
+      <p><strong>Codelists affected:</strong> ${changes ? [...new Set(changes.map(c => c.codelist))].join(', ') : (selectedCodelist ? selectedCodelist.name : '')}</p>
     </div>
     <div style="display:flex;gap:1rem;justify-content:center;">
       <button id="simulate-send" style="padding:.75rem 1.5rem;background:#667eea;color:#fff;border:none;border-radius:6px;cursor:pointer;">📤 Send Email</button>
       <button id="close-reset" style="padding:.75rem 1.5rem;background:#a0aec0;color:#fff;border:none;border-radius:6px;cursor:pointer;">Close & Reset Session</button>
     </div>`;
-  modal.className='modal'; modal.appendChild(content); document.body.appendChild(modal);
+      modal.className = 'modal'; modal.appendChild(content); document.body.appendChild(modal);
 
-  content.querySelector('#close-reset').addEventListener('click',()=>{
-    modal.remove(); resetSession(true);
-  });
+      content.querySelector('#close-reset').addEventListener('click', () => {
+        modal.remove(); resetSession(true);
+      });
 
-const sendBtn = content.querySelector('#simulate-send');
-sendBtn.addEventListener('click', async () => {
-  try {
-    sendBtn.disabled = true;
-    sendBtn.textContent = "Sending...";
+      const sendBtn = content.querySelector('#simulate-send');
+      sendBtn.addEventListener('click', async () => {
+        try {
+          sendBtn.disabled = true;
+          sendBtn.textContent = "Sending...";
 
-    // 1. Send admin notification to info@gissa.com.au with attachment
-    await sendEmailViaBackend({ subject, htmlBody: body, excelBlob, filename });
+          // 1. Send admin notification to info@gissa.com.au with attachment
+          await sendEmailViaBackend({ subject, htmlBody: body, excelBlob, filename });
 
-    // 2. Send confirmation to requester
-    if (userEmail) {
-      const confirmSubject = "RE: We received your A-SPEC Codelist update";
-      const confirmBody =
-`Hi ${userName},
+          // 2. Send confirmation to requester
+          if (userEmail) {
+            const confirmSubject = "RE: We received your A-SPEC Codelist update";
+            const confirmBody =
+              `Hi ${userName},
 
 You are receiving this email as confirmation that your submission has been received by the A-SPEC team and includes the following change/s.
 
 Submitted by: ${userName}
 Organisation: ${userOrganisation || 'Not provided'}
 
-Quick summary (${changes ? changes.length : 1} change${(changes && changes.length!==1) ? 's' : ''}):
-${(changes || []).map(c=>`• ${c.code} — ${c.description} (${c.codelist})`).join('\n')}
+Quick summary (${changes ? changes.length : 1} change${(changes && changes.length !== 1) ? 's' : ''}):
+${(changes || []).map(c => `• ${c.code} — ${c.description} (${c.codelist})`).join('\n')}
 
 What's Next?
 The A-SPEC team will review these changes and update any documentation or processes that reference these codes.
@@ -1533,148 +1785,149 @@ Best regards,
 The A-SPEC team
 ---
 Please Note: This is an automated notification from the A-SPEC Code Dashboard.`;
-      await sendEmailViaBackend({ to: userEmail, subject: confirmSubject, htmlBody: confirmBody });
+            await sendEmailViaBackend({ to: userEmail, subject: confirmSubject, htmlBody: confirmBody });
+          }
+
+          sendBtn.textContent = "✅ Email sent";
+          sendBtn.style.background = "#48bb78";
+          showEmailSentConfirmation();
+        } catch (e) {
+          alert("Send failed: " + e.message);
+          sendBtn.disabled = false;
+          sendBtn.textContent = "📤 Send Email";
+        }
+      });
+
     }
 
-    sendBtn.textContent = "✅ Email sent";
-    sendBtn.style.background = "#48bb78";
-    showEmailSentConfirmation();
-  } catch (e) {
-    alert("Send failed: " + e.message);
-    sendBtn.disabled = false;
-    sendBtn.textContent = "📤 Send Email";
-  }
-});
-
-}
-
-function showEmailSentConfirmation(){
-  const msg=document.createElement('div');
-  msg.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#f0fff4;border:2px solid #48bb78;padding:2rem;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.2);z-index:11000;text-align:center;';
-  msg.innerHTML=`
+    function showEmailSentConfirmation() {
+      const msg = document.createElement('div');
+      msg.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#f0fff4;border:2px solid #48bb78;padding:2rem;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.2);z-index:11000;text-align:center;';
+      msg.innerHTML = `
     <h3 style="color:#22543d;margin-bottom:1rem;">📧 Email Notification Sent!</h3>
     <p style="color:#2f855a;margin-bottom:1rem;">Notification with ${sessionChanges.length} change(s) sent to info@gissa.com.au</p>
     <button id="complete-session" style="padding:.5rem 1rem;background:#48bb78;color:#fff;border:none;border-radius:4px;cursor:pointer;">Complete Session</button>
   `;
-  document.body.appendChild(msg);
-  document.getElementById('complete-session').onclick=function(){
-    msg.remove(); resetSession(true);
-  };
-}
+      document.body.appendChild(msg);
+      document.getElementById('complete-session').onclick = function () {
+        msg.remove(); resetSession(true);
+      };
+    }
 
-/* -------------------- Reset & reload -------------------- */
-function updateStep(n,status){
-  const step=document.getElementById(`step${n}`);
-  step.className=`step ${status}`;
-}
+    /* -------------------- Reset & reload -------------------- */
+    function updateStep(n, status) {
+      const step = document.getElementById(`step${n}`);
+      step.className = `step ${status}`;
+    }
 
-function resetSession(deep=false){
-  sessionChanges=[]; selectedCodelist=null; selectedExistingCode=null; selectedNewCode=null;
+    function resetSession(deep = false) {
+      sessionChanges = []; selectedCodelist = null; selectedExistingCode = null; selectedNewCode = null;
 
-  const ids = ['codelist-section','creation-section','codelist-search','code-search',
-               'new-code-description','manual-code-name','manual-code-description',
-               'user-name', 'user-organisation','user-comments'];
-  ids.forEach(id => { const el=document.getElementById(id); if(!el) return;
-    if (el.tagName==='DIV' || el.tagName==='SECTION') { if (id.endsWith('-section')) el.style.display='none'; }
-    else { el.value=''; }
-  });
-  const clearHTML = ['search-results','code-suggestions','manual-validation-message'];
-  clearHTML.forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=''; });
+      const ids = ['codelist-section', 'creation-section', 'codelist-search', 'code-search',
+        'new-code-description', 'manual-code-name', 'manual-code-description',
+        'user-name', 'user-organisation', 'user-comments'];
+      ids.forEach(id => {
+        const el = document.getElementById(id); if (!el) return;
+        if (el.tagName === 'DIV' || el.tagName === 'SECTION') { if (id.endsWith('-section')) el.style.display = 'none'; }
+        else { el.value = ''; }
+      });
+      const clearHTML = ['search-results', 'code-suggestions', 'manual-validation-message'];
+      clearHTML.forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
 
-  const userInfoSection=document.getElementById('user-info-section'); if (userInfoSection) userInfoSection.style.display='none';
-  document.querySelectorAll('.modal, .changes-modal').forEach(m=>m.remove());
+      const userInfoSection = document.getElementById('user-info-section'); if (userInfoSection) userInfoSection.style.display = 'none';
+      document.querySelectorAll('.modal, .changes-modal').forEach(m => m.remove());
 
-  updateStep(1,'active'); updateStep(2,''); updateStep(3,'');
-  document.querySelectorAll('.codelist-card').forEach(card=>card.classList.remove('selected'));
-  document.querySelectorAll('.existing-code-item').forEach(i=>{i.style.backgroundColor='white';i.style.border='1px solid transparent';});
+      updateStep(1, 'active'); updateStep(2, ''); updateStep(3, '');
+      document.querySelectorAll('.codelist-card').forEach(card => card.classList.remove('selected'));
+      document.querySelectorAll('.existing-code-item').forEach(i => { i.style.backgroundColor = 'white'; i.style.border = '1px solid transparent'; });
 
-  codelists=[];
-  if (deep) loadMasterFile();
-}
+      codelists = [];
+      if (deep) loadMasterFile();
+    }
 
-/* -------------------- Search across all codelists -------------------- */
+    /* -------------------- Search across all codelists -------------------- */
 
-/* ── Fuzzy search helpers ──────────────────────────────────────────────────
- *  Tested against 3,964 real A-SPEC codes.
- *  Rules preventing false positives:
- *  1. Substring shortcut only for single-word queries (multi-word must use token overlap)
- *  2. Token prefix-match only when BOTH tokens ≥ 3 chars
- *  3. Stopwords filtered before tokenisation
- *  4. Multi-word queries skip character edit-distance entirely
- * ─────────────────────────────────────────────────────────────────────── */
-function levenshtein(a, b) {
-  const m = a.length, n = b.length;
-  const dp = Array.from({length: m + 1}, (_, i) => [i, ...Array(n).fill(0)]);
-  for (let j = 0; j <= n; j++) dp[0][j] = j;
-  for (let i = 1; i <= m; i++)
-    for (let j = 1; j <= n; j++)
-      dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
-  return dp[m][n];
-}
-function fuzzyStem(w) {
-  return w.replace(/ings?$/,'').replace(/tion$/,'').replace(/ness$/,'')
-          .replace(/ment$/,'').replace(/able$/,'').replace(/ible$/,'')
-          .replace(/ally?$/,'').replace(/ers?$/,'').replace(/ly$/,'')
-          .replace(/es$/,'').replace(/s$/,'');
-}
-const FUZZY_SW = new Set(['a','an','the','is','in','of','to','for','and','or','be','used','when','not','at','by','that','this','with','it']);
-function fuzzyTok(s) {
-  return s.toLowerCase().split(/\s+/).filter(w => w.length >= 2 && !FUZZY_SW.has(w)).map(fuzzyStem).filter(Boolean);
-}
-const FUZZY_THRESHOLD = 0.60;
-function fuzzyScore(query, target) {
-  const q = query.toLowerCase().trim(), t = target.toLowerCase().trim();
-  if (!q || !t) return 0;
-  const qt = fuzzyTok(q);
-  const isMultiWord = qt.length > 1;
-  // Substring only for single-word queries — multi-word must rank by token overlap
-  if (!isMultiWord && q.length >= 4 && t.length >= 4 && (t.includes(q) || q.includes(t))) return 0.95;
-  const tt = fuzzyTok(t);
-  if (qt.length && tt.length) {
-    let hits = 0;
-    qt.forEach(a => { if (tt.some(b => b===a || (a.length>=3&&b.length>=3&&(b.startsWith(a)||a.startsWith(b))))) hits++; });
-    const qCov = hits / qt.length;
-    const tCov = hits / Math.max(tt.length, 1);
-    const ts   = (2 * qCov * tCov) / (qCov + tCov + 1e-9);
-    if (ts >= 0.40) return 0.55 + ts * 0.40;
-    if (isMultiWord) return 0;
-  }
-  const ml = Math.max(q.length, t.length);
-  if (!ml) return 0;
-  const es = 1 - levenshtein(q, t) / ml;
-  let bte = 0;
-  fuzzyTok(q).forEach(a => fuzzyTok(t).forEach(b => { const l=Math.max(a.length,b.length); if(l) bte=Math.max(bte,1-levenshtein(a,b)/l); }));
-  return Math.max(es, bte * 0.85);
-}
+    /* ── Fuzzy search helpers ──────────────────────────────────────────────────
+     *  Tested against 3,964 real A-SPEC codes.
+     *  Rules preventing false positives:
+     *  1. Substring shortcut only for single-word queries (multi-word must use token overlap)
+     *  2. Token prefix-match only when BOTH tokens ≥ 3 chars
+     *  3. Stopwords filtered before tokenisation
+     *  4. Multi-word queries skip character edit-distance entirely
+     * ─────────────────────────────────────────────────────────────────────── */
+    function levenshtein(a, b) {
+      const m = a.length, n = b.length;
+      const dp = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
+      for (let j = 0; j <= n; j++) dp[0][j] = j;
+      for (let i = 1; i <= m; i++)
+        for (let j = 1; j <= n; j++)
+          dp[i][j] = a[i - 1] === b[j - 1] ? dp[i - 1][j - 1] : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+      return dp[m][n];
+    }
+    function fuzzyStem(w) {
+      return w.replace(/ings?$/, '').replace(/tion$/, '').replace(/ness$/, '')
+        .replace(/ment$/, '').replace(/able$/, '').replace(/ible$/, '')
+        .replace(/ally?$/, '').replace(/ers?$/, '').replace(/ly$/, '')
+        .replace(/es$/, '').replace(/s$/, '');
+    }
+    const FUZZY_SW = new Set(['a', 'an', 'the', 'is', 'in', 'of', 'to', 'for', 'and', 'or', 'be', 'used', 'when', 'not', 'at', 'by', 'that', 'this', 'with', 'it']);
+    function fuzzyTok(s) {
+      return s.toLowerCase().split(/\s+/).filter(w => w.length >= 2 && !FUZZY_SW.has(w)).map(fuzzyStem).filter(Boolean);
+    }
+    const FUZZY_THRESHOLD = 0.60;
+    function fuzzyScore(query, target) {
+      const q = query.toLowerCase().trim(), t = target.toLowerCase().trim();
+      if (!q || !t) return 0;
+      const qt = fuzzyTok(q);
+      const isMultiWord = qt.length > 1;
+      // Substring only for single-word queries — multi-word must rank by token overlap
+      if (!isMultiWord && q.length >= 4 && t.length >= 4 && (t.includes(q) || q.includes(t))) return 0.95;
+      const tt = fuzzyTok(t);
+      if (qt.length && tt.length) {
+        let hits = 0;
+        qt.forEach(a => { if (tt.some(b => b === a || (a.length >= 3 && b.length >= 3 && (b.startsWith(a) || a.startsWith(b))))) hits++; });
+        const qCov = hits / qt.length;
+        const tCov = hits / Math.max(tt.length, 1);
+        const ts = (2 * qCov * tCov) / (qCov + tCov + 1e-9);
+        if (ts >= 0.40) return 0.55 + ts * 0.40;
+        if (isMultiWord) return 0;
+      }
+      const ml = Math.max(q.length, t.length);
+      if (!ml) return 0;
+      const es = 1 - levenshtein(q, t) / ml;
+      let bte = 0;
+      fuzzyTok(q).forEach(a => fuzzyTok(t).forEach(b => { const l = Math.max(a.length, b.length); if (l) bte = Math.max(bte, 1 - levenshtein(a, b) / l); }));
+      return Math.max(es, bte * 0.85);
+    }
 
-function matchPill(label, bg, color) {
-  return `<span style="display:inline-block;padding:.15rem .5rem;border-radius:4px;font-size:.75rem;font-weight:600;background:${bg};color:${color};margin-bottom:.4rem;letter-spacing:.02em;">${label}</span>`;
-}
+    function matchPill(label, bg, color) {
+      return `<span style="display:inline-block;padding:.15rem .5rem;border-radius:4px;font-size:.75rem;font-weight:600;background:${bg};color:${color};margin-bottom:.4rem;letter-spacing:.02em;">${label}</span>`;
+    }
 
-/* ── Search handler — 5 tiers, code-first ─────────────────────────────────
- *  Tier 1a  Exact code match        (any length)
- *  Tier 1b  Code starts with query  (any length, sorted A-Z)
- *  Tier 2   Desc starts with query  (query ≥ 3 chars, shown below code results)
- *  Tier 3   Desc contains query     (query ≥ 3 chars, shown below tier 2)
- *  Tier 4   Fuzzy / close match     (query ≥ 4 chars, only when 1-3 empty)
- *  Tier 5   Nothing found → encourage creation
- * ──────────────────────────────────────────────────────────────────────── */
-function handleCodeSearch(e){
-  const raw = e.target.value.trim();
-  const qu  = raw.toUpperCase();
-  const ql  = raw.toLowerCase();
-  const results = document.getElementById('search-results');
-  if (raw.length < 1) { results.innerHTML = ''; return; }
+    /* ── Search handler — 5 tiers, code-first ─────────────────────────────────
+     *  Tier 1a  Exact code match        (any length)
+     *  Tier 1b  Code starts with query  (any length, sorted A-Z)
+     *  Tier 2   Desc starts with query  (query ≥ 3 chars, shown below code results)
+     *  Tier 3   Desc contains query     (query ≥ 3 chars, shown below tier 2)
+     *  Tier 4   Fuzzy / close match     (query ≥ 4 chars, only when 1-3 empty)
+     *  Tier 5   Nothing found → encourage creation
+     * ──────────────────────────────────────────────────────────────────────── */
+    function handleCodeSearch(e) {
+      const raw = e.target.value.trim();
+      const qu = raw.toUpperCase();
+      const ql = raw.toLowerCase();
+      const results = document.getElementById('search-results');
+      if (raw.length < 1) { results.innerHTML = ''; return; }
 
-  function buildCard(item, pill, borderColor, pickerId) {
-    const ec = item.code.replace(/'/g,"\\'");
-    const ed = item.description.replace(/'/g,"\\'");
-    const es = (item.spec||'').replace(/'/g,"\\'");
-    const ef = item.codelistName.replace(/'/g,"\\'");
-    const alreadyInTarget = selectedCodelist.codes.some(ec2 =>
-      pick(ec2,'Code_Value','CODE_Value','CODE_VALUE','Code','CODE').toUpperCase() === item.code.toUpperCase()
-    );
-    const actionHtml = `
+      function buildCard(item, pill, borderColor, pickerId) {
+        const ec = item.code.replace(/'/g, "\\'");
+        const ed = item.description.replace(/'/g, "\\'");
+        const es = (item.spec || '').replace(/'/g, "\\'");
+        const ef = item.codelistName.replace(/'/g, "\\'");
+        const alreadyInTarget = selectedCodelist.codes.some(ec2 =>
+          pick(ec2, 'Code_Value', 'CODE_Value', 'CODE_VALUE', 'Code', 'CODE').toUpperCase() === item.code.toUpperCase()
+        );
+        const actionHtml = `
       <div style="margin-top:.5rem;display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;">
         <span style="font-size:.85rem;color:#4a5568;">From: <b>${item.codelistName}</b></span>
         ${alreadyInTarget ? `<span style="font-size:.85rem;color:#276749;background:#f0fff4;padding:.2rem .5rem;border-radius:4px;border:1px solid #9ae6b4;">✓ Already in this codelist</span>` : ''}
@@ -1683,7 +1936,7 @@ function handleCodeSearch(e){
           📋 Copy to Codelist
         </button>
       </div>`;
-    return `
+        return `
       <div style="background:#fff;border-left:4px solid ${borderColor};border-top:1px solid #e2e8f0;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;border-radius:6px;padding:1rem;margin-bottom:.5rem;">
         ${pill}
         <div style="font-weight:600;color:#2d3748;font-family:monospace;font-size:1.05rem;">${item.code}</div>
@@ -1692,150 +1945,160 @@ function handleCodeSearch(e){
         ${actionHtml}
         <div id="${pickerId}" style="display:none;"></div>
       </div>`;
-  }
-
-  // Tier 1a: exact full code match
-  const exactItems = [];
-  const seenExact = new Set();
-  codelists.forEach(cl => {
-    cl.codes.forEach(row => {
-      const cv = pick(row,'Code_Value','CODE_Value','CODE_VALUE','Code','CODE');
-      if (cv.toUpperCase() === qu && !seenExact.has(cv.toUpperCase())) {
-        seenExact.add(cv.toUpperCase());
-        exactItems.push({ codelistName:cl.name, code:cv,
-          description:pick(row,'Description','DESCRIPTION')||'',
-          comment:pick(row,'Comment','COMMENT','comment')||'', spec:pick(row,'Spec','SPEC')||'' });
       }
-    });
-  });
 
-  // Tier 1b: code starts with query
-  const startsItems = [];
-  const seenStarts = new Set([...seenExact]);
-  codelists.forEach(cl => {
-    cl.codes.forEach(row => {
-      const cv = pick(row,'Code_Value','CODE_Value','CODE_VALUE','Code','CODE');
-      if (cv.toUpperCase().startsWith(qu) && !seenStarts.has(cv.toUpperCase())) {
-        seenStarts.add(cv.toUpperCase());
-        startsItems.push({ codelistName:cl.name, code:cv,
-          description:pick(row,'Description','DESCRIPTION')||'',
-          comment:pick(row,'Comment','COMMENT','comment')||'', spec:pick(row,'Spec','SPEC')||'' });
+      // Tier 1a: exact full code match
+      const exactItems = [];
+      const seenExact = new Set();
+      codelists.forEach(cl => {
+        cl.codes.forEach(row => {
+          const cv = pick(row, 'Code_Value', 'CODE_Value', 'CODE_VALUE', 'Code', 'CODE');
+          if (cv.toUpperCase() === qu && !seenExact.has(cv.toUpperCase())) {
+            seenExact.add(cv.toUpperCase());
+            exactItems.push({
+              codelistName: cl.name, code: cv,
+              description: pick(row, 'Description', 'DESCRIPTION') || '',
+              comment: pick(row, 'Comment', 'COMMENT', 'comment') || '', spec: pick(row, 'Spec', 'SPEC') || ''
+            });
+          }
+        });
+      });
+
+      // Tier 1b: code starts with query
+      const startsItems = [];
+      const seenStarts = new Set([...seenExact]);
+      codelists.forEach(cl => {
+        cl.codes.forEach(row => {
+          const cv = pick(row, 'Code_Value', 'CODE_Value', 'CODE_VALUE', 'Code', 'CODE');
+          if (cv.toUpperCase().startsWith(qu) && !seenStarts.has(cv.toUpperCase())) {
+            seenStarts.add(cv.toUpperCase());
+            startsItems.push({
+              codelistName: cl.name, code: cv,
+              description: pick(row, 'Description', 'DESCRIPTION') || '',
+              comment: pick(row, 'Comment', 'COMMENT', 'comment') || '', spec: pick(row, 'Spec', 'SPEC') || ''
+            });
+          }
+        });
+      });
+      startsItems.sort((a, b) => a.code.localeCompare(b.code));
+
+      // Tier 2 & 3: description matches (query ≥ 3 chars only)
+      const descStartsItems = [], descContainsItems = [];
+      const seenDesc = new Set([...seenStarts]);
+      if (raw.length >= 3) {
+        codelists.forEach(cl => {
+          cl.codes.forEach(row => {
+            const cv = pick(row, 'Code_Value', 'CODE_Value', 'CODE_VALUE', 'Code', 'CODE');
+            const desc = pick(row, 'Description', 'DESCRIPTION') || '';
+            if (seenDesc.has(cv.toUpperCase())) return;
+            if (desc.toLowerCase().startsWith(ql)) {
+              seenDesc.add(cv.toUpperCase());
+              descStartsItems.push({
+                codelistName: cl.name, code: cv, description: desc,
+                comment: pick(row, 'Comment', 'COMMENT', 'comment') || '', spec: pick(row, 'Spec', 'SPEC') || ''
+              });
+            }
+          });
+        });
+        const seenContains = new Set([...seenDesc]);
+        codelists.forEach(cl => {
+          cl.codes.forEach(row => {
+            const cv = pick(row, 'Code_Value', 'CODE_Value', 'CODE_VALUE', 'Code', 'CODE');
+            const desc = pick(row, 'Description', 'DESCRIPTION') || '';
+            if (seenContains.has(cv.toUpperCase())) return;
+            if (desc.toLowerCase().includes(ql)) {
+              seenContains.add(cv.toUpperCase());
+              descContainsItems.push({
+                codelistName: cl.name, code: cv, description: desc,
+                comment: pick(row, 'Comment', 'COMMENT', 'comment') || '', spec: pick(row, 'Spec', 'SPEC') || ''
+              });
+            }
+          });
+        });
       }
-    });
-  });
-  startsItems.sort((a, b) => a.code.localeCompare(b.code));
 
-  // Tier 2 & 3: description matches (query ≥ 3 chars only)
-  const descStartsItems = [], descContainsItems = [];
-  const seenDesc = new Set([...seenStarts]);
-  if (raw.length >= 3) {
-    codelists.forEach(cl => {
-      cl.codes.forEach(row => {
-        const cv   = pick(row,'Code_Value','CODE_Value','CODE_VALUE','Code','CODE');
-        const desc = pick(row,'Description','DESCRIPTION') || '';
-        if (seenDesc.has(cv.toUpperCase())) return;
-        if (desc.toLowerCase().startsWith(ql)) {
-          seenDesc.add(cv.toUpperCase());
-          descStartsItems.push({ codelistName:cl.name, code:cv, description:desc,
-            comment:pick(row,'Comment','COMMENT','comment')||'', spec:pick(row,'Spec','SPEC')||'' });
-        }
-      });
-    });
-    const seenContains = new Set([...seenDesc]);
-    codelists.forEach(cl => {
-      cl.codes.forEach(row => {
-        const cv   = pick(row,'Code_Value','CODE_Value','CODE_VALUE','Code','CODE');
-        const desc = pick(row,'Description','DESCRIPTION') || '';
-        if (seenContains.has(cv.toUpperCase())) return;
-        if (desc.toLowerCase().includes(ql)) {
-          seenContains.add(cv.toUpperCase());
-          descContainsItems.push({ codelistName:cl.name, code:cv, description:desc,
-            comment:pick(row,'Comment','COMMENT','comment')||'', spec:pick(row,'Spec','SPEC')||'' });
-        }
-      });
-    });
-  }
+      const hasCodeResults = exactItems.length > 0 || startsItems.length > 0;
+      const hasDescResults = descStartsItems.length > 0 || descContainsItems.length > 0;
 
-  const hasCodeResults = exactItems.length > 0 || startsItems.length > 0;
-  const hasDescResults = descStartsItems.length > 0 || descContainsItems.length > 0;
-
-  // Render Tier 1 (code matches)
-  if (hasCodeResults) {
-    const pillExact  = matchPill('EXACT CODE',  '#dbeafe', '#1e40af');
-    const pillStarts = matchPill('CODE MATCH',  '#dbeafe', '#1e40af');
-    const bannerMsg  = exactItems.length > 0
-      ? `ℹ️ <b>${raw.toUpperCase()}</b> exists as a code — copy it to your codelist, or keep typing.`
-      : `🔤 Found ${startsItems.length} code${startsItems.length!==1?'s':''} starting with <b>"${raw.toUpperCase()}"</b> — copy one or keep typing.`;
-    let html = `
+      // Render Tier 1 (code matches)
+      if (hasCodeResults) {
+        const pillExact = matchPill('EXACT CODE', '#dbeafe', '#1e40af');
+        const pillStarts = matchPill('CODE MATCH', '#dbeafe', '#1e40af');
+        const bannerMsg = exactItems.length > 0
+          ? `ℹ️ <b>${raw.toUpperCase()}</b> exists as a code — copy it to your codelist, or keep typing.`
+          : `🔤 Found ${startsItems.length} code${startsItems.length !== 1 ? 's' : ''} starting with <b>"${raw.toUpperCase()}"</b> — copy one or keep typing.`;
+        let html = `
       <div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:8px;padding:.85rem 1rem;margin-bottom:.75rem;">
         <p style="color:#1e40af;font-size:.92rem;margin:0;">${bannerMsg}</p>
       </div>
       <div style="max-height:360px;overflow-y:auto;">
-        ${exactItems.map((item,i) => buildCard(item, pillExact,  '#3b82f6', `picker-exact-${i}`)).join('')}
-        ${startsItems.map((item,i) => buildCard(item, pillStarts, '#3b82f6', `picker-starts-${i}`)).join('')}
+        ${exactItems.map((item, i) => buildCard(item, pillExact, '#3b82f6', `picker-exact-${i}`)).join('')}
+        ${startsItems.map((item, i) => buildCard(item, pillStarts, '#3b82f6', `picker-starts-${i}`)).join('')}
       </div>`;
-    if (hasDescResults) {
-      const pillD = matchPill('DESCRIPTION MATCH', '#dcfce7', '#166534');
-      html += `
+        if (hasDescResults) {
+          const pillD = matchPill('DESCRIPTION MATCH', '#dcfce7', '#166534');
+          html += `
         <div style="margin-top:1rem;padding-top:.75rem;border-top:2px dashed #e2e8f0;">
           <p style="font-size:.82rem;color:#718096;margin-bottom:.5rem;">Also found in descriptions:</p>
-          ${descStartsItems.slice(0,5).map((item,i)  => buildCard(item, pillD, '#22c55e', `picker-ds-${i}`)).join('')}
-          ${descContainsItems.slice(0,10).map((item,i) => buildCard(item, pillD, '#22c55e', `picker-dc-${i}`)).join('')}
+          ${descStartsItems.slice(0, 5).map((item, i) => buildCard(item, pillD, '#22c55e', `picker-ds-${i}`)).join('')}
+          ${descContainsItems.slice(0, 10).map((item, i) => buildCard(item, pillD, '#22c55e', `picker-dc-${i}`)).join('')}
         </div>`;
-    }
-    results.innerHTML = html;
-    return;
-  }
+        }
+        results.innerHTML = html;
+        return;
+      }
 
-  // Render Tier 2+3 only
-  if (hasDescResults) {
-    const pillD  = matchPill('DESCRIPTION MATCH', '#dcfce7', '#166534');
-    const shownDS = descStartsItems.slice(0, 10);
-    const shownDC = descContainsItems.slice(0, 10);
-    const total   = shownDS.length + shownDC.length;
-    results.innerHTML = `
+      // Render Tier 2+3 only
+      if (hasDescResults) {
+        const pillD = matchPill('DESCRIPTION MATCH', '#dcfce7', '#166534');
+        const shownDS = descStartsItems.slice(0, 10);
+        const shownDC = descContainsItems.slice(0, 10);
+        const total = shownDS.length + shownDC.length;
+        results.innerHTML = `
       <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:.85rem 1rem;margin-bottom:.75rem;">
-        <h4 style="color:#166534;margin-bottom:.25rem;">✅ Found ${total} description match${total!==1?'es':''} for "<b>${raw}</b>"</h4>
+        <h4 style="color:#166534;margin-bottom:.25rem;">✅ Found ${total} description match${total !== 1 ? 'es' : ''} for "<b>${raw}</b>"</h4>
         <p style="font-size:.88rem;color:#15803d;margin:0;">These codes have descriptions matching your search. Copy one, or scroll down to create a brand new code.</p>
       </div>
       <div style="max-height:400px;overflow-y:auto;">
-        ${shownDS.map((item,i) => buildCard(item, pillD, '#22c55e', `picker-ds2-${i}`)).join('')}
-        ${shownDC.map((item,i) => buildCard(item, pillD, '#22c55e', `picker-dc2-${i}`)).join('')}
+        ${shownDS.map((item, i) => buildCard(item, pillD, '#22c55e', `picker-ds2-${i}`)).join('')}
+        ${shownDC.map((item, i) => buildCard(item, pillD, '#22c55e', `picker-dc2-${i}`)).join('')}
       </div>`;
-    return;
-  }
+        return;
+      }
 
-  // Tier 4: Fuzzy (query ≥ 4 chars, nothing found above)
-  if (raw.length >= 4) {
-    const fuzzyItems = [];
-    const seenFuzzy  = new Set();
-    codelists.forEach(cl => {
-      cl.codes.forEach(row => {
-        const cv   = pick(row,'Code_Value','CODE_Value','CODE_VALUE','Code','CODE');
-        const desc = pick(row,'Description','DESCRIPTION') || '';
-        if (!cv || seenFuzzy.has(cv.toUpperCase())) return;
-        const sDesc = desc.length > 3   ? fuzzyScore(raw, desc) : 0;
-        const sCode = cv.length   >= 3  ? fuzzyScore(raw, cv)   : 0;
-        const best  = Math.max(sDesc, sCode);
-        if (best >= FUZZY_THRESHOLD) {
-          seenFuzzy.add(cv.toUpperCase());
-          fuzzyItems.push({ codelistName:cl.name, code:cv, description:desc,
-            comment:pick(row,'Comment','COMMENT','comment')||'', spec:pick(row,'Spec','SPEC')||'', score:best });
-        }
-      });
-    });
-    fuzzyItems.sort((a,b) => b.score - a.score);
-    const topFuzzy = fuzzyItems.slice(0, 8);
-    if (topFuzzy.length > 0) {
-      const escaped2 = raw.replace(/'/g,"\\'");
-      const pill = matchPill('CLOSE MATCH', '#fef9c3', '#854d0e');
-      results.innerHTML = `
+      // Tier 4: Fuzzy (query ≥ 4 chars, nothing found above)
+      if (raw.length >= 4) {
+        const fuzzyItems = [];
+        const seenFuzzy = new Set();
+        codelists.forEach(cl => {
+          cl.codes.forEach(row => {
+            const cv = pick(row, 'Code_Value', 'CODE_Value', 'CODE_VALUE', 'Code', 'CODE');
+            const desc = pick(row, 'Description', 'DESCRIPTION') || '';
+            if (!cv || seenFuzzy.has(cv.toUpperCase())) return;
+            const sDesc = desc.length > 3 ? fuzzyScore(raw, desc) : 0;
+            const sCode = cv.length >= 3 ? fuzzyScore(raw, cv) : 0;
+            const best = Math.max(sDesc, sCode);
+            if (best >= FUZZY_THRESHOLD) {
+              seenFuzzy.add(cv.toUpperCase());
+              fuzzyItems.push({
+                codelistName: cl.name, code: cv, description: desc,
+                comment: pick(row, 'Comment', 'COMMENT', 'comment') || '', spec: pick(row, 'Spec', 'SPEC') || '', score: best
+              });
+            }
+          });
+        });
+        fuzzyItems.sort((a, b) => b.score - a.score);
+        const topFuzzy = fuzzyItems.slice(0, 8);
+        if (topFuzzy.length > 0) {
+          const escaped2 = raw.replace(/'/g, "\\'");
+          const pill = matchPill('CLOSE MATCH', '#fef9c3', '#854d0e');
+          results.innerHTML = `
         <div style="background:#fefce8;border:1px solid #fde047;border-radius:8px;padding:.85rem 1rem;margin-bottom:.75rem;">
           <h4 style="color:#854d0e;margin-bottom:.25rem;">🔍 Similar codes found for "<b>${raw}</b>"</h4>
           <p style="font-size:.88rem;color:#92400e;margin:0;">No exact match, but these look similar — copy one or create a brand new code below.</p>
         </div>
         <div style="max-height:400px;overflow-y:auto;">
-          ${topFuzzy.map((item,i) => buildCard(item, pill, '#eab308', `picker-fuzzy-${i}`)).join('')}
+          ${topFuzzy.map((item, i) => buildCard(item, pill, '#eab308', `picker-fuzzy-${i}`)).join('')}
         </div>
         <div style="margin-top:.75rem;padding:.7rem .9rem;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;">
           <span style="color:#166534;font-size:.88rem;">None of these are right? Create a brand new code:</span>
@@ -1844,13 +2107,13 @@ function handleCodeSearch(e){
             ➕ Create New Code: "${raw}"
           </button>
         </div>`;
-      return;
-    }
-  }
+          return;
+        }
+      }
 
-  // Tier 5: Nothing at all
-  const escaped = raw.replace(/'/g,"\\'");
-  results.innerHTML = `
+      // Tier 5: Nothing at all
+      const escaped = raw.replace(/'/g, "\\'");
+      results.innerHTML = `
     <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:1rem;">
       <h4 style="color:#166534;margin-bottom:.3rem;">🌱 "<b>${raw}</b>" looks like a brand new code!</h4>
       <p style="color:#15803d;margin-bottom:.75rem;font-size:.92rem;">Nothing in the master codelist matches. Use the options below to create it, or try a different search term.</p>
@@ -1859,37 +2122,37 @@ function handleCodeSearch(e){
         ➕ Create New Code: "${raw}"
       </button>
     </div>`;
-}
+    }
 
 
-function createNewWithSearchTerm(term){
-  showAutoCodeCreation();
-  document.getElementById('new-code-description').value=term;
-  generateCodeSuggestions();
-}
+    function createNewWithSearchTerm(term) {
+      showAutoCodeCreation();
+      document.getElementById('new-code-description').value = term;
+      generateCodeSuggestions();
+    }
 
 
-window.addSearchedCodeToCodelist = function(code, desc, fromName, spec) {
-  // This is now just an alias kept for backward compat - real logic is in confirmCopyToCodelist
-  // Only block if already in the currently selected codelist
-  const alreadyInTarget = selectedCodelist.codes.some(ec =>
-    pick(ec,'Code_Value','CODE_Value','CODE_VALUE','Code','CODE').toUpperCase() === code.toUpperCase()
-  );
-  if (alreadyInTarget) {
-    alert(`Code "${code}" already exists in "${selectedCodelist.name}". No need to copy it again.`);
-    return;
-  }
+    window.addSearchedCodeToCodelist = function (code, desc, fromName, spec) {
+      // This is now just an alias kept for backward compat - real logic is in confirmCopyToCodelist
+      // Only block if already in the currently selected codelist
+      const alreadyInTarget = selectedCodelist.codes.some(ec =>
+        pick(ec, 'Code_Value', 'CODE_Value', 'CODE_VALUE', 'Code', 'CODE').toUpperCase() === code.toUpperCase()
+      );
+      if (alreadyInTarget) {
+        alert(`Code "${code}" already exists in "${selectedCodelist.name}". No need to copy it again.`);
+        return;
+      }
 
-  selectedNewCode = {
-    code: code,
-    description: desc,
-    _sourceCodelist: fromName,
-    _spec: spec
-  };
+      selectedNewCode = {
+        code: code,
+        description: desc,
+        _sourceCodelist: fromName,
+        _spec: spec
+      };
 
-  const msgDiv = document.getElementById('manual-validation-message');
-  if (msgDiv) {
-    msgDiv.innerHTML = `
+      const msgDiv = document.getElementById('manual-validation-message');
+      if (msgDiv) {
+        msgDiv.innerHTML = `
       <div style="background:#f0fff4;border:1px solid #9ae6b4;padding:.75rem;border-radius:4px;color:#22543d;">
         ✅ Code selected to add into <b>${selectedCodelist.name}</b><br>
         <div style="margin-top:.5rem;font-weight:600;">Code: ${code}</div>
@@ -1897,53 +2160,51 @@ window.addSearchedCodeToCodelist = function(code, desc, fromName, spec) {
         <div style="margin-top:.25rem;font-size:.85rem;color:#4a5568;">(Copied from: ${fromName})</div>
       </div>
     `;
-  }
+      }
 
-  const autoSec = document.getElementById('create-auto-section');
-  const manSec  = document.getElementById('create-manual-section');
-  if (autoSec) autoSec.style.display = 'none';
-  if (manSec)  manSec.style.display  = 'none';
+      const autoSec = document.getElementById('create-auto-section');
+      const manSec = document.getElementById('create-manual-section');
+      if (autoSec) autoSec.style.display = 'none';
+      if (manSec) manSec.style.display = 'none';
 
-  const userInfoSection = document.getElementById('user-info-section');
-  if (userInfoSection) {
-    userInfoSection.style.display = 'block';
-    userInfoSection.scrollIntoView({behavior:'smooth'});
-  }
-};
+      const userInfoSection = document.getElementById('user-info-section');
+      if (userInfoSection) {
+        userInfoSection.style.display = 'block';
+        userInfoSection.scrollIntoView({ behavior: 'smooth' });
+      }
+    };
 
 
-/* -------------------- Load file & boot -------------------- */
-async function loadMasterFile(){
-  try{
-    const resp = await fetch(MASTER_FILE_URL, { cache: "no-cache" });
-    if (!resp.ok) throw new Error("Failed to load master file!");
-    const buffer = await resp.arrayBuffer();
+    /* -------------------- Load file & boot -------------------- */
+    async function loadMasterFile() {
+      try {
+        const resp = await fetch(MASTER_FILE_URL, { cache: "no-cache" });
+        if (!resp.ok) throw new Error("Failed to load master file!");
+        const buffer = await resp.arrayBuffer();
 
-    const workbook = XLSX.read(buffer, { type:'array' });
-    const sheetName = workbook.SheetNames.find(n => n.toUpperCase().includes('CODELIST_MASTER') || n.toUpperCase().includes('MASTER')) || workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-    const jsonData  = XLSX.utils.sheet_to_json(worksheet);
+        const workbook = XLSX.read(buffer, { type: 'array' });
+        const sheetName = workbook.SheetNames.find(n => n.toUpperCase().includes('CODELIST_MASTER') || n.toUpperCase().includes('MASTER')) || workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-    processCodelistData(jsonData);
-    updateStep(1,'completed'); updateStep(2,'active'); showCodelistSelection();
-  }catch(err){
-    alert('Error loading master codelist: ' + err.message + '\nTip: put the XLSX in the same folder as this HTML and check the exact file name.');
-    console.error(err);
-  }
-}
+        processCodelistData(jsonData);
+        updateStep(1, 'completed'); updateStep(2, 'active'); showCodelistSelection();
+      } catch (err) {
+        alert('Error loading master codelist: ' + err.message + '\nTip: put the XLSX in the same folder as this HTML and check the exact file name.');
+        console.error(err);
+      }
+    }
 
-document.addEventListener('DOMContentLoaded',()=>{
-  const as = document.querySelector('.logo-container img');
-  if (as) as.addEventListener('click',()=>window.open('https://www.aspec.org.au','_blank'));
-  const gl = document.querySelector('.gissa-logo img');
-  if (gl) gl.addEventListener('click',()=>window.open('https://www.gissa.org.au','_blank'));
+    document.addEventListener('DOMContentLoaded', () => {
+      const as = document.querySelector('.logo-container img');
+      if (as) as.addEventListener('click', () => window.open('https://www.aspec.org.au', '_blank'));
+      const gl = document.querySelector('.gissa-logo img');
+      if (gl) gl.addEventListener('click', () => window.open('https://www.gissa.org.au', '_blank'));
 
-  document.getElementById('download-master-btn').onclick = function(){
-    const a=document.createElement('a'); a.href=MASTER_FILE_URL; a.download=MASTER_FILE_NAME; document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  };
 
-  loadMasterFile();
-});
+      loadMasterFile();
+    });
   </script>
 </body>
+
 </html>
