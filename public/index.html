@@ -171,66 +171,124 @@
       color: #a0aec0
     }
 
+    .workflow-progress-shell {
+      position: sticky;
+      top: 0;
+      z-index: 9000;
+      background: rgba(255, 255, 255, .97);
+      border-bottom: 1px solid rgba(148, 163, 184, .35);
+      box-shadow: 0 4px 16px rgba(15, 23, 42, .12);
+      backdrop-filter: blur(10px)
+    }
+
     .workflow-steps {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 2rem
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: .7rem 2rem .65rem;
+      display: grid;
+      grid-template-columns: repeat(6, minmax(105px, 1fr));
+      align-items: start
     }
 
     .step {
-      flex: 1;
+      min-width: 0;
+      position: relative;
       text-align: center;
-      padding: 1rem;
-      position: relative
+      color: #94a3b8;
+      opacity: .38;
+      transition: opacity .2s ease, color .2s ease, transform .2s ease
     }
 
     .step::after {
       content: '';
       position: absolute;
-      top: 50%;
-      right: -1px;
-      width: 2px;
-      height: 60%;
-      background: #e2e8f0;
-      transform: translateY(-50%)
+      z-index: 0;
+      top: 22px;
+      left: calc(50% + 27px);
+      width: calc(100% - 54px);
+      height: 3px;
+      border-radius: 999px;
+      background: #dbe2ea;
+      transition: background .2s ease
     }
 
     .step:last-child::after {
       display: none
     }
 
-    .step-number {
-      width: 40px;
-      height: 40px;
+    .step.completed,
+    .step.active {
+      opacity: 1
+    }
+
+    .step.active {
+      color: #4f46e5;
+      transform: translateY(-1px)
+    }
+
+    .step.completed {
+      color: #15803d;
+      opacity: .72
+    }
+
+    .step.completed::after {
+      background: #86efac
+    }
+
+    .step-marker {
+      position: relative;
+      z-index: 1;
+      width: 44px;
+      height: 44px;
+      margin: 0 auto .38rem;
+      border: 2px solid #cbd5e1;
       border-radius: 50%;
-      background: #e2e8f0;
-      color: #718096;
+      background: #f1f5f9;
+      color: #64748b;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 0 auto .5rem;
-      font-weight: 600
+      box-shadow: 0 2px 6px rgba(15, 23, 42, .08);
+      transition: all .2s ease
     }
 
-    .step.active .step-number {
-      background: #667eea;
-      color: #fff
+    .step-marker svg {
+      width: 21px;
+      height: 21px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round
     }
 
-    .step.completed .step-number {
-      background: #48bb78;
-      color: #fff
+    .step.active .step-marker {
+      border-color: #4f46e5;
+      background: #4f46e5;
+      color: #fff;
+      box-shadow: 0 0 0 5px rgba(99, 102, 241, .16), 0 5px 12px rgba(79, 70, 229, .28)
+    }
+
+    .step.completed .step-marker {
+      border-color: #22c55e;
+      background: #dcfce7;
+      color: #15803d
     }
 
     .step-title {
-      font-weight: 600;
-      color: #2d3748;
-      margin-bottom: .25rem
+      padding: 0 .35rem;
+      font-size: .82rem;
+      line-height: 1.25;
+      font-weight: 700;
+      color: currentColor
     }
 
     .step-description {
-      font-size: .9rem;
-      color: #fff
+      padding: 0 .45rem;
+      margin-top: .2rem;
+      font-size: .69rem;
+      line-height: 1.25;
+      color: currentColor
     }
 
 
@@ -279,12 +337,19 @@
         font-size: 2rem
       }
 
-      .workflow-steps {
-        flex-direction: column;
-        gap: 1rem
+      .workflow-progress-shell {
+        overflow-x: auto;
+        overscroll-behavior-x: contain
       }
 
-      .step::after {
+      .workflow-steps {
+        width: max-content;
+        min-width: 720px;
+        padding: .6rem 1rem .55rem;
+        grid-template-columns: repeat(6, 120px)
+      }
+
+      .step-description {
         display: none
       }
     }
@@ -314,25 +379,55 @@
     </div>
   </div>
 
-  <div class="main-content">
-    <!-- Steps -->
+  <!-- Sticky workflow status -->
+  <div class="workflow-progress-shell" aria-label="Codelist update progress">
     <div class="workflow-steps">
-      <div class="step active" id="step1">
-        <div class="step-number">1</div>
-        <div class="step-title">Load Master Codelist</div>
-        <div class="step-description">The latest A-SPEC codelist file will be loaded automatically.</div>
+      <div class="step active" id="step1" data-step="1" aria-current="step">
+        <div class="step-marker" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+        </div>
+        <div class="step-title">Load Master</div>
+        <div class="step-description">Read the latest file</div>
       </div>
-      <div class="step" id="step2">
-        <div class="step-number">2</div>
-        <div class="step-title">Select Target Codelist</div>
-        <div class="step-description">Choose which codelist to add new codes to</div>
+      <div class="step" id="step2" data-step="2">
+        <div class="step-marker" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>
+        </div>
+        <div class="step-title">Select Codelist</div>
+        <div class="step-description">Choose the target list</div>
       </div>
-      <div class="step" id="step3">
-        <div class="step-number">3</div>
-        <div class="step-title">Search & Create</div>
-        <div class="step-description">Find matches or create new codes</div>
+      <div class="step" id="step3" data-step="3">
+        <div class="step-marker" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+        </div>
+        <div class="step-title">Search Codes</div>
+        <div class="step-description">Check existing matches</div>
+      </div>
+      <div class="step" id="step4" data-step="4">
+        <div class="step-marker" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+        </div>
+        <div class="step-title">Create or Copy</div>
+        <div class="step-description">Generate, enter, or copy</div>
+      </div>
+      <div class="step" id="step5" data-step="5">
+        <div class="step-marker" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M9 5h6"/><path d="M9 3h6v4H9z"/><path d="M6 5H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1"/><path d="m8 14 2 2 5-5"/></svg>
+        </div>
+        <div class="step-title">Review &amp; Details</div>
+        <div class="step-description">Review changes and details</div>
+      </div>
+      <div class="step" id="step6" data-step="6">
+        <div class="step-marker" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+        </div>
+        <div class="step-title">Submit Update</div>
+        <div class="step-description">Send both notifications</div>
       </div>
     </div>
+  </div>
+
+  <div class="main-content">
 
     <!-- Loaded file -->
     <div class="section" id="loaded-file-section">
@@ -429,6 +524,21 @@
       }
       return "";
     }
+    function escapeEmailText(value) {
+      return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      })[char]);
+    }
+    function getChangeComment(change) {
+      return (change && (change.comments || pick(change.entryRef || {}, 'Comment', 'COMMENT', 'comment')) || '').trim();
+    }
+    function formatEmailChangeSummary(changes, bullet = '•') {
+      return (changes || []).map(change => {
+        const summary = `${bullet} ${escapeEmailText(change.code)} — ${escapeEmailText(change.description)} (${escapeEmailText(change.codelist)})`;
+        const comment = getChangeComment(change);
+        return `${summary}\n  Comments: ${comment ? escapeEmailText(comment) : 'Not provided'}`;
+      }).join('\n');
+    }
     function pad2(n) { return String(n).padStart(2, "0"); }
     function formatDate(d) {
       const dt = (d instanceof Date) ? d : new Date(d);
@@ -507,6 +617,7 @@
     let selectedNewCode = null;
     let sessionChanges = [];
     let lastUserName = '', lastUserEmail = '', lastUserOrganisation = '', lastUserWantsConfirm = false;
+    let currentWorkflowStep = 1;
 
     /* -------------------- Data processing -------------------- */
     function processCodelistData(data) {
@@ -665,8 +776,7 @@
       const card = evt.currentTarget || evt.target.closest('.codelist-card');
       if (card) card.classList.add('selected');
 
-      updateStep(2, 'completed');
-      updateStep(3, 'active');
+      setCurrentStep(3);
       showCodeCreation();
 
       const creation = document.getElementById('creation-section');
@@ -884,6 +994,7 @@
 
     // ── Copy picker: current codelist button + mini searchable codelist list ─────
     window.showCopyPicker = function (pickerId, code, desc, spec, sourceCodelistName) {
+      setCurrentStep(4);
       // Close any other open pickers first
       document.querySelectorAll('.copy-picker-panel').forEach(p => {
         if (p.id !== pickerId) { p.style.display = 'none'; p.innerHTML = ''; }
@@ -1030,6 +1141,7 @@
 
     // Called when user confirms which codelist to copy to
     window.confirmCopyToCodelist = function (code, desc, spec, targetName, pickerId) {
+      setCurrentStep(4);
       if (!targetName) {
         const msg = document.getElementById('picker-msg-' + pickerId);
         if (msg) msg.innerHTML = '<span style="color:#c05621;font-size:.87rem;">⚠️ Please select a target codelist first.</span>';
@@ -1061,11 +1173,13 @@
     };
 
     function showAutoCodeCreation() {
+      setCurrentStep(4);
       document.getElementById('create-auto-section').style.display = 'block';
       document.getElementById('create-manual-section').style.display = 'none';
       document.getElementById('new-code-description').focus();
     }
     function showManualCodeCreation() {
+      setCurrentStep(4);
       document.getElementById('create-manual-section').style.display = 'block';
       document.getElementById('create-auto-section').style.display = 'none';
       document.getElementById('manual-code-name').focus();
@@ -1252,6 +1366,7 @@
 
 
     function selectCodeSuggestion(code, description) {
+      setCurrentStep(4);
       selectedNewCode = { code, description };
       document.querySelectorAll('.code-suggestion').forEach(i => { i.style.borderColor = '#e2e8f0'; i.style.backgroundColor = '#fff'; });
       const sel = document.querySelector(`[data-code="${code}"]`);
@@ -1351,6 +1466,7 @@
 
       selectedNewCode = null;
 
+      setCurrentStep(5);
       askForMoreChanges();
     }
 
@@ -1440,6 +1556,7 @@
     }
 
     function askForMoreChanges() {
+      setCurrentStep(5);
       const modal = document.createElement('div');
       modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:10000;display:flex;justify-content:center;align-items:center;';
       const content = document.createElement('div');
@@ -1472,8 +1589,8 @@
       modal.className = 'changes-modal';
       modal.appendChild(content);
       document.body.appendChild(modal);
-      window.continueChanges = () => { modal.remove(); };
-      window.finalizeAndSendEmail = () => { modal.remove(); validateUserInfoAndSend(); };
+      window.continueChanges = () => { modal.remove(); setCurrentStep(3); };
+      window.finalizeAndSendEmail = () => { modal.remove(); setCurrentStep(5); validateUserInfoAndSend(); };
     }
 
     function applyUserInfoToSessionChanges(userName, userOrganisation, userEmail, userComments) {
@@ -1496,6 +1613,7 @@
     }
 
     function validateUserInfoAndSend() {
+      setCurrentStep(5);
       if (lastUserName && lastUserOrganisation && isValidEmail(lastUserEmail)) {
         sendBatchEmailNotification();
         return;
@@ -1565,6 +1683,7 @@
     }
 
     async function sendBatchEmailNotification() {
+      setCurrentStep(6);
       const userName = lastUserName || sessionChanges.find(c => c.addedBy)?.addedBy || 'System User';
       await sendEmailNotification(null, userName, sessionChanges);
     }
@@ -1580,7 +1699,7 @@
       const updatedExcelBlob = await generateUpdatedExcelFile();
       const d = new Date(), iso = d.toISOString().split('T')[0].replace(/-/g, '');
       const subject = `A-SPEC New Code Update Notification - ${d.toLocaleDateString('en-AU', { year: 'numeric', month: 'long', day: 'numeric' })}`;
-      const newTerms = arr.map(ch => `* **${ch.code}** - ${ch.description} (${ch.codelist})`).join('\n');
+      const newTerms = formatEmailChangeSummary(arr, '*');
       const body =
         `Dear A-SPEC Team,
 
@@ -1593,9 +1712,9 @@ ${newTerms}
 * **Total codes in database:** ${getTotalTermsCount()}
 * **New code/s this update:** ${arr.length}
 * **Last updated:** ${d.toLocaleDateString('en-AU', { year: 'numeric', month: 'long', day: 'numeric' })}
-* **Updated by:** ${userName}
-* **Organisation:** ${lastUserOrganisation || 'Not provided'}
-* **Requester email:** ${lastUserEmail || 'Not provided'}
+* **Updated by:** ${escapeEmailText(userName)}
+* **Organisation:** ${escapeEmailText(lastUserOrganisation || 'Not provided')}
+* **Requester email:** ${escapeEmailText(lastUserEmail || 'Not provided')}
 
 **What's Next?**
 Please review these changes and update any documentation or processes that reference these codes.
@@ -1717,6 +1836,7 @@ Please Note: This is an automated notification from the A-SPEC Code Dashboard.`;
 
     /* -------------------- Email preview & send -------------------- */
     function showEmailPreview(subject, body, excelBlob, filename, changes, opts = {}) {
+      setCurrentStep(6);
       const { userName = 'User', userEmail = '', userOrganisation = '', wantConfirm = false } = opts;
       const modal = document.createElement('div');
       modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:10000;display:flex;justify-content:center;align-items:center;';
@@ -1733,9 +1853,9 @@ Please Note: This is an automated notification from the A-SPEC Code Dashboard.`;
     <div style="margin-bottom:1.5rem;padding:1rem;background:#ebf8ff;border-radius:8px;color:#000;">
       <h4 style="margin-bottom:.5rem;">📊 Session Summary:</h4>
       <p><strong>Total changes:</strong> ${changes ? changes.length : 1}</p>
-      <p><strong>Submitted by:</strong> ${userName}</p>
-      <p><strong>Organisation:</strong> ${userOrganisation || 'Not provided'}</p>
-      <p><strong>Requester email:</strong> ${userEmail || 'Not provided'}</p>
+      <p><strong>Submitted by:</strong> ${escapeEmailText(userName)}</p>
+      <p><strong>Organisation:</strong> ${escapeEmailText(userOrganisation || 'Not provided')}</p>
+      <p><strong>Requester email:</strong> ${escapeEmailText(userEmail || 'Not provided')}</p>
       <p><strong>File version:</strong> ${filename}</p>
       <p><strong>Codelists affected:</strong> ${changes ? [...new Set(changes.map(c => c.codelist))].join(', ') : (selectedCodelist ? selectedCodelist.name : '')}</p>
     </div>
@@ -1762,15 +1882,15 @@ Please Note: This is an automated notification from the A-SPEC Code Dashboard.`;
           if (userEmail) {
             const confirmSubject = "RE: We received your A-SPEC Codelist update";
             const confirmBody =
-              `Hi ${userName},
+              `Hi ${escapeEmailText(userName)},
 
 You are receiving this email as confirmation that your submission has been received by the A-SPEC team and includes the following change/s.
 
-Submitted by: ${userName}
-Organisation: ${userOrganisation || 'Not provided'}
+Submitted by: ${escapeEmailText(userName)}
+Organisation: ${escapeEmailText(userOrganisation || 'Not provided')}
 
 Quick summary (${changes ? changes.length : 1} change${(changes && changes.length !== 1) ? 's' : ''}):
-${(changes || []).map(c => `• ${c.code} — ${c.description} (${c.codelist})`).join('\n')}
+${formatEmailChangeSummary(changes || [], '•')}
 
 What's Next?
 The A-SPEC team will review these changes and update any documentation or processes that reference these codes.
@@ -1801,6 +1921,7 @@ Please Note: This is an automated notification from the A-SPEC Code Dashboard.`;
     }
 
     function showEmailSentConfirmation() {
+      setCurrentStep(6);
       const msg = document.createElement('div');
       msg.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#f0fff4;border:2px solid #48bb78;padding:2rem;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.2);z-index:11000;text-align:center;';
       msg.innerHTML = `
@@ -1815,9 +1936,19 @@ Please Note: This is an automated notification from the A-SPEC Code Dashboard.`;
     }
 
     /* -------------------- Reset & reload -------------------- */
-    function updateStep(n, status) {
-      const step = document.getElementById(`step${n}`);
-      step.className = `step ${status}`;
+    function setCurrentStep(stepNumber) {
+      const totalSteps = 6;
+      currentWorkflowStep = Math.min(Math.max(Number(stepNumber) || 1, 1), totalSteps);
+
+      document.querySelectorAll('.workflow-steps .step').forEach(step => {
+        const number = Number(step.dataset.step);
+        const isActive = number === currentWorkflowStep;
+        step.classList.toggle('active', isActive);
+        step.classList.toggle('completed', number < currentWorkflowStep);
+        step.classList.toggle('pending', number > currentWorkflowStep);
+        if (isActive) step.setAttribute('aria-current', 'step');
+        else step.removeAttribute('aria-current');
+      });
     }
 
     function resetSession(deep = false) {
@@ -1837,7 +1968,7 @@ Please Note: This is an automated notification from the A-SPEC Code Dashboard.`;
       const userInfoSection = document.getElementById('user-info-section'); if (userInfoSection) userInfoSection.style.display = 'none';
       document.querySelectorAll('.modal, .changes-modal').forEach(m => m.remove());
 
-      updateStep(1, 'active'); updateStep(2, ''); updateStep(3, '');
+      setCurrentStep(1);
       document.querySelectorAll('.codelist-card').forEach(card => card.classList.remove('selected'));
       document.querySelectorAll('.existing-code-item').forEach(i => { i.style.backgroundColor = 'white'; i.style.border = '1px solid transparent'; });
 
@@ -2133,6 +2264,7 @@ Please Note: This is an automated notification from the A-SPEC Code Dashboard.`;
 
 
     window.addSearchedCodeToCodelist = function (code, desc, fromName, spec) {
+      setCurrentStep(4);
       // This is now just an alias kept for backward compat - real logic is in confirmCopyToCodelist
       // Only block if already in the currently selected codelist
       const alreadyInTarget = selectedCodelist.codes.some(ec =>
@@ -2169,6 +2301,7 @@ Please Note: This is an automated notification from the A-SPEC Code Dashboard.`;
 
       const userInfoSection = document.getElementById('user-info-section');
       if (userInfoSection) {
+        setCurrentStep(5);
         userInfoSection.style.display = 'block';
         userInfoSection.scrollIntoView({ behavior: 'smooth' });
       }
@@ -2177,6 +2310,7 @@ Please Note: This is an automated notification from the A-SPEC Code Dashboard.`;
 
     /* -------------------- Load file & boot -------------------- */
     async function loadMasterFile() {
+      setCurrentStep(1);
       try {
         const resp = await fetch(MASTER_FILE_URL, { cache: "no-cache" });
         if (!resp.ok) throw new Error("Failed to load master file!");
@@ -2188,7 +2322,8 @@ Please Note: This is an automated notification from the A-SPEC Code Dashboard.`;
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
         processCodelistData(jsonData);
-        updateStep(1, 'completed'); updateStep(2, 'active'); showCodelistSelection();
+        setCurrentStep(2);
+        showCodelistSelection();
       } catch (err) {
         alert('Error loading master codelist: ' + err.message + '\nTip: put the XLSX in the same folder as this HTML and check the exact file name.');
         console.error(err);
