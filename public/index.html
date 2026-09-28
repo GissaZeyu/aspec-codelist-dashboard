@@ -437,8 +437,7 @@
       </div>
       <div style="margin-bottom:1.2rem;">
         <strong>File:</strong>
-        <span id="master-file-name" style="color:#667eea;">A-SPEC CODELISTS Version 2.0.11 MASTER WIP -
-          20260908.xlsx</span>
+        <span id="master-file-name" style="color:#667eea;">Detecting latest master…</span>
       </div>
       <p style="font-size:.9rem;color:#718096;margin-top:-.4rem;line-height:1.6;">
         This Dashboard is currently using the Master Codelist version shown above.
@@ -490,6 +489,9 @@
     </div>
   </div>
 
+  <!-- Generated during build; keeps master version/date out of index.html -->
+  <script src="master-config.js"></script>
+
   <!-- XLSX parser -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -500,9 +502,12 @@
     const EMAIL_TO = "info@gissa.com.au";
     const EMAIL_FROM = "info@gissa.com.au"; // must be a verified sender
 
-    // Hardcoded master file name in the same folder:
-    const MASTER_FILE_URL = "A-SPEC CODELISTS Version 2.0.11 MASTER WIP - 20260908.xlsx";
-    const MASTER_FILE_NAME = "A-SPEC CODELISTS Version 2.0.11 MASTER WIP - 20260908.xlsx";
+    const MASTER_CONFIG = window.ASPEC_MASTER_CONFIG;
+    if (!MASTER_CONFIG || !MASTER_CONFIG.fileName) {
+      throw new Error('master-config.js is missing or invalid. Run npm run sync-master before opening or deploying the dashboard.');
+    }
+    const MASTER_FILE_URL = MASTER_CONFIG.fileName;
+    const MASTER_FILE_NAME = MASTER_CONFIG.fileName;
 
     /* Parses the version from MASTER_FILE_NAME and returns the next patch version.
      * e.g. "...Version 2.0.8 MASTER..." → "2.0.9"
@@ -2311,6 +2316,8 @@ Please Note: This is an automated notification from the A-SPEC Code Dashboard.`;
     /* -------------------- Load file & boot -------------------- */
     async function loadMasterFile() {
       setCurrentStep(1);
+      const masterName = document.getElementById('master-file-name');
+      if (masterName) masterName.textContent = MASTER_FILE_NAME;
       try {
         const resp = await fetch(MASTER_FILE_URL, { cache: "no-cache" });
         if (!resp.ok) throw new Error("Failed to load master file!");

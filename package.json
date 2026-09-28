@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "A-SPEC Codelist Dashboard Application",
   "scripts": {
+    "build": "npm run sync-master",
+    "sync-master": "node scripts/sync-master.js",
+    "check-master": "node scripts/sync-master.js --check",
     "start": "node backend/server.js",
     "dev": "node backend/server.js"
   },
