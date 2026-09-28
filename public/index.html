@@ -916,8 +916,9 @@
     <div id="create-auto-section" style="display:none;margin-top:2rem;padding:1rem;background:#f0fff4;border:1px solid #9ae6b4;border-radius:8px;">
       <h4 style="color:#2d3748;margin-bottom:1rem;">🤖 Create New Code - System Generated</h4>
       <div style="margin-bottom:1rem;">
-        <label style="display:block;margin-bottom:.5rem;color:#4a5568;font-weight:600;">Description for new code:</label>
+        <label for="new-code-description" style="display:block;margin-bottom:.5rem;color:#4a5568;font-weight:600;">Description for new code: <span style="color:#c53030;" aria-hidden="true">*</span></label>
         <input type="text" id="new-code-description" placeholder="Enter description and system will suggest unique code names..."
+               required aria-required="true"
                style="width:100%;padding:.5rem;border:1px solid #e2e8f0;border-radius:4px;"/>
       </div>
       <div id="code-suggestions" style="margin-top:1rem;"></div>
@@ -926,15 +927,17 @@
     <div id="create-manual-section" style="display:none;margin-top:2rem;padding:1rem;background:#ebf8ff;border:1px solid #90cdf4;border-radius:8px;">
       <h4 style="color:#2d3748;margin-bottom:1rem;">✏️ Create New Code - Manual Input</h4>
       <div style="margin-bottom:1rem;">
-        <label style="display:block;margin-bottom:.5rem;color:#4a5568;font-weight:600;">Code Name (max 10 characters, no spaces):</label>
+        <label for="manual-code-name" style="display:block;margin-bottom:.5rem;color:#4a5568;font-weight:600;">Code Name (max 10 characters, no spaces): <span style="color:#c53030;" aria-hidden="true">*</span></label>
         <input type="text" id="manual-code-name" placeholder="e.g., VEGPLNT" maxlength="10"
+               required aria-required="true"
                style="width:100%;padding:.5rem;border:1px solid #e2e8f0;border-radius:4px;text-transform:uppercase;"
                oninput="this.value = this.value.replace(/\\s/g, '').toUpperCase()"/>
         <div style="font-size:.85rem;color:#718096;margin-top:.25rem;">Enter code without spaces. Maximum 10 characters.</div>
       </div>
       <div style="margin-bottom:1rem;">
-        <label style="display:block;margin-bottom:.5rem;color:#4a5568;font-weight:600;">Description:</label>
+        <label for="manual-code-description" style="display:block;margin-bottom:.5rem;color:#4a5568;font-weight:600;">Description: <span style="color:#c53030;" aria-hidden="true">*</span></label>
         <input type="text" id="manual-code-description" placeholder="Enter description for the code..."
+               required aria-required="true"
                style="width:100%;padding:.5rem;border:1px solid #e2e8f0;border-radius:4px;"/>
       </div>
       <button onclick="validateAndCreateManualCode()" style="padding:.75rem 1.5rem;background:#48bb78;color:#fff;border:none;border-radius:6px;cursor:pointer;">
@@ -1208,12 +1211,17 @@
         msgDiv.innerHTML = '<div style="background:#fee;border:1px solid #f88;padding:.75rem;border-radius:4px;color:#c00;">❌ Code name cannot contain spaces.</div>';
         return;
       }
-      if (!description) {
-        msgDiv.innerHTML = '<div style="background:#fee;border:1px solid #f88;padding:.75rem;border-radius:4px;color:#c00;">❌ Please enter a description.</div>';
-        return;
-      }
       if (codeExists(codeName)) {
         msgDiv.innerHTML = '<div style="background:#fee;border:1px solid #f88;padding:.75rem;border-radius:4px;color:#c00;">❌ This code already exists in the master codelist.</div>';
+        return;
+      }
+      const descriptionMatches = findExactDescriptionMatches(codeName);
+      if (descriptionMatches.length > 0) {
+        msgDiv.innerHTML = renderDescriptionConflictMessage(descriptionMatches);
+        return;
+      }
+      if (!description) {
+        msgDiv.innerHTML = '<div style="background:#fee;border:1px solid #f88;padding:.75rem;border-radius:4px;color:#c00;">❌ Please enter a description.</div>';
         return;
       }
 
@@ -1241,7 +1249,7 @@
            onmouseout="this.style.borderColor='#e2e8f0';this.style.backgroundColor='white';">
         <div style="font-weight:600;color:#2d3748;margin-bottom:.5rem;font-family:monospace;font-size:1.1rem;">${s.code}</div>
         <div style="font-size:.9rem;color:#718096;margin-bottom:.5rem;">${s.explanation}</div>
-        <div style="font-size:.8rem;color:#a0aec0;">Length: ${s.code.length} ${!codeExists(s.code) ? ' • ✅ Available' : ' • ❌ Already exists'}</div>
+        <div style="font-size:.8rem;color:#a0aec0;">Length: ${s.code.length} ${!codeUnavailable(s.code) ? ' • ✅ Available' : ' • ❌ Unavailable'}</div>
       </div>
     `).join('')}
     </div>
@@ -1290,6 +1298,71 @@
       );
     }
 
+    // George review rule: a proposed code must not exactly match the full
+    // description of an active master record. This is deliberately an exact,
+    // case-insensitive comparison rather than a substring search, which would
+    // incorrectly block short codes such as MAT or OPEN.
+    function normalizeDescriptionMatch(value) {
+      return String(value || '').trim().replace(/\s+/g, ' ').toUpperCase();
+    }
+
+    function findExactDescriptionMatches(code) {
+      const check = normalizeDescriptionMatch(code);
+      if (!check) return [];
+
+      const matches = [];
+      const seen = new Set();
+
+      codelists.forEach(cl => {
+        cl.codes.forEach(row => {
+          const description = pick(row, 'Description', 'DESCRIPTION');
+          if (normalizeDescriptionMatch(description) !== check) return;
+
+          const existingCode = pick(
+            row,
+            'Code_Value',
+            'CODE_Value',
+            'CODE_VALUE',
+            'Code',
+            'CODE'
+          );
+          const key = `${existingCode.toUpperCase()}|${cl.name}|${check}`;
+          if (seen.has(key)) return;
+          seen.add(key);
+
+          matches.push({
+            code: existingCode,
+            description,
+            codelist: cl.name
+          });
+        });
+      });
+
+      return matches;
+    }
+
+    function renderDescriptionConflictMessage(matches) {
+      const shown = matches.slice(0, 3);
+      const items = shown.map(match =>
+        `<li style="margin-top:.3rem;"><b>${escapeEmailText(match.code)}</b> — ${escapeEmailText(match.description)} <span style="color:#718096;">(${escapeEmailText(match.codelist)})</span></li>`
+      ).join('');
+      const more = matches.length > shown.length
+        ? `<div style="margin-top:.4rem;color:#718096;">And ${matches.length - shown.length} more matching record(s).</div>`
+        : '';
+
+      return `
+        <div style="background:#fff5f5;border:1px solid #f88;padding:.75rem;border-radius:4px;color:#9b2c2c;">
+          <div><b>❌ This code matches an existing description in the master codelist.</b></div>
+          <div style="margin-top:.35rem;">Use or copy the existing code instead:</div>
+          <ul style="margin:.35rem 0 0 1.2rem;">${items}</ul>
+          ${more}
+        </div>`;
+    }
+
+    function codeUnavailable(code) {
+      return codeExistsAnywhere(code) || findExactDescriptionMatches(code).length > 0;
+    }
+
     function codeExists(code) {
       return codeExistsAnywhere(code);
     }
@@ -1297,7 +1370,7 @@
     function makeUniqueCode(baseCode, fallbackPrefix = 'CD') {
       const cleanBase = sanitizeCode(baseCode);
 
-      if (cleanBase && !codeExistsAnywhere(cleanBase)) {
+      if (cleanBase && !codeUnavailable(cleanBase)) {
         return cleanBase;
       }
 
@@ -1305,7 +1378,7 @@
 
       for (let i = 0; i < 200; i++) {
         const randomCode = sanitizeCode((prefix + generateRandomSuffix(4)).substring(0, 10));
-        if (randomCode && !codeExistsAnywhere(randomCode)) {
+        if (randomCode && !codeUnavailable(randomCode)) {
           return randomCode;
         }
       }
@@ -1340,9 +1413,9 @@
       function pushSuggestion(preferredCode, explanation, fallbackPrefix) {
         let finalCode = preferredCode;
 
-        if (!finalCode || codeExistsAnywhere(finalCode) || used.has(finalCode)) {
+        if (!finalCode || codeUnavailable(finalCode) || used.has(finalCode)) {
           finalCode = makeUniqueCode(fallbackPrefix, fallbackPrefix);
-          explanation += ' (preferred code already existed, so a unique random code was generated)';
+          explanation += ' (preferred code was unavailable, so a unique random code was generated)';
         }
 
         if (!used.has(finalCode)) {
@@ -1513,8 +1586,9 @@
           oninput="this.value=this.value.replace(/\\s/g,'').toUpperCase()"/>
       </div>
       <div style="margin-bottom:.6rem;">
-        <label style="font-size:.82rem;color:#4a5568;font-weight:600;display:block;margin-bottom:.25rem;">Description:</label>
+        <label for="edit-desc-${idx}" style="font-size:.82rem;color:#4a5568;font-weight:600;display:block;margin-bottom:.25rem;">Description: <span style="color:#c53030;" aria-hidden="true">*</span></label>
         <input id="edit-desc-${idx}" type="text" value="${ch.description.replace(/"/g, '&quot;')}"
+          required aria-required="true"
           style="width:100%;padding:.4rem .5rem;border:1px solid #c3d0f5;border-radius:4px;"/>
       </div>
       <div style="display:flex;gap:.5rem;">
@@ -1539,6 +1613,13 @@
       if (newCode !== ch.code && codeExistsAnywhere(newCode)) {
         msg.innerHTML = '<span style="color:#c53030;">That code already exists in the master codelist.</span>';
         return;
+      }
+      if (newCode !== ch.code) {
+        const descriptionMatches = findExactDescriptionMatches(newCode);
+        if (descriptionMatches.length > 0) {
+          msg.innerHTML = renderDescriptionConflictMessage(descriptionMatches);
+          return;
+        }
       }
 
       // Update session change

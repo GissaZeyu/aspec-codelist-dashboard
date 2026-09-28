@@ -5,9 +5,7 @@
   "scripts": {
     "build": "npm run sync-master",
     "sync-master": "node scripts/sync-master.js",
-    "check-master": "node scripts/sync-master.js --check",
-    "start": "node backend/server.js",
-    "dev": "node backend/server.js"
+    "check-master": "node scripts/sync-master.js --check"
   },
   "dependencies": {
     "express": "^4.18.2",
