@@ -694,10 +694,17 @@
           'CODE'
         );
 
-        // Keep all historical code values reserved for uniqueness validation.
+        // Keep all code values reserved for uniqueness validation,
+        // including unpublished Specs.
         if (codeValue) {
           allMasterCodeValues.add(codeValue.toUpperCase());
         }
+
+        // X-Spec is not published yet.
+        // Exclude it from all public browsing and search results.
+        const rowSpec = pick(row, 'Spec', 'SPEC').toUpperCase();
+
+        if (rowSpec === 'X') return;
 
         // Do not display historical removed records as current codes.
         if (isRemovedRecord(row)) return;
