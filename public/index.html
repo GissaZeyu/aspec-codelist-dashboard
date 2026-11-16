@@ -458,6 +458,16 @@
         <span class="section-icon">🔍</span>
         <h2 class="section-title">Select Target Codelist</h2>
       </div>
+      <div style="margin-bottom:1rem;">
+      <label for="spec-filter"
+        style="display:block;color:#2d3748;font-weight:600;margin-bottom:.5rem;">
+        Select Specification:
+      </label>
+      <select id="spec-filter" required
+        style="width:100%;padding:.7rem;border:1px solid #cbd5e0;border-radius:6px;color:#2d3748;background:white;">
+        <option value="">-- Select a Spec --</option>
+      </select>
+      </div>
       <input type="text" class="search-input" id="codelist-search"
         placeholder="Search for codelists... (e.g., 'pipe material', 'valve type')" />
       <div class="codelist-grid" id="codelist-grid"></div>
@@ -616,7 +626,49 @@
 
     /* -------------------- App state -------------------- */
     let codelists = [];
-    let allMasterCodeValues = new Set();
+    let allMasterCodeValues = new Set();    
+    let selectedSpec = '';
+
+    function getCodelistForSpec(name, spec) {
+      const original = codelists.find(c => c.name === name);
+      if (!original || !spec) return null;
+
+      const codes = original.codes.filter(row =>
+        pick(row, 'Spec', 'SPEC').trim().toUpperCase() === spec
+      );
+
+      if (!codes.length) return null;
+
+      return {
+        ...original,
+        codes,
+        specs: [spec]
+      };
+    }
+
+    function updateSpecSelection() {
+      const select = document.getElementById('spec-filter');
+      selectedSpec = select.value;
+
+      selectedCodelist = null;
+      selectedNewCode = null;
+
+      const creation = document.getElementById('creation-section');
+      creation.style.display = 'none';
+
+      const search = document.getElementById('codelist-search');
+      search.value = '';
+
+      CL_all = selectedSpec
+        ? codelists
+            .map(c => getCodelistForSpec(c.name, selectedSpec))
+            .filter(Boolean)
+        : [];
+
+      CL_filtered = CL_all.slice();
+      CL_page = 1;
+      renderCodelistPage();
+    }
     let selectedCodelist = null;
     let selectedExistingCode = null;
     let selectedNewCode = null;
@@ -688,15 +740,34 @@
     let CL_page = 1;      // 1-based
     let CL_pageSize = 24;
 
+    
     function showCodelistSelection() {
       document.getElementById('codelist-section').style.display = 'block';
 
-      // seed pagination arrays
-      CL_all = codelists.slice();
-      CL_filtered = CL_all.slice();
+      const specSelect = document.getElementById('spec-filter');
+
+      const availableSpecs = [...new Set(
+        codelists.flatMap(c => c.specs || [])
+          .map(s => String(s).trim().toUpperCase())
+          .filter(Boolean)
+      )].sort();
+
+      specSelect.innerHTML =
+        '<option value="">-- Select a Spec --</option>' +
+        availableSpecs.map(spec =>
+          `<option value="${spec}">${spec}-Spec</option>`
+        ).join('');
+
+      specSelect.onchange = updateSpecSelection;
+
+      selectedSpec = '';
+      CL_all = [];
+      CL_filtered = [];
 
       const searchInput = document.getElementById('codelist-search');
-      searchInput.addEventListener('input', handleCodelistSearch);
+
+      // Replace existing handler instead of adding another one
+      searchInput.oninput = handleCodelistSearch;
 
       const ps = document.getElementById('codelist-page-size');
       const prev = document.getElementById('codelist-prev');
@@ -704,22 +775,38 @@
 
       CL_pageSize = parseInt(ps.value, 10) || 24;
 
-      ps.addEventListener('change', () => {
+      // Rows per page
+      ps.onchange = () => {
         CL_pageSize = parseInt(ps.value, 10) || 24;
         CL_page = 1;
         renderCodelistPage();
-      });
-      prev.addEventListener('click', () => {
-        if (CL_page > 1) { CL_page--; renderCodelistPage(); }
-      });
-      next.addEventListener('click', () => {
-        const totalPages = Math.max(1, Math.ceil(CL_filtered.length / CL_pageSize));
-        if (CL_page < totalPages) { CL_page++; renderCodelistPage(); }
-      });
+      };
+
+      // Previous page
+      prev.onclick = () => {
+        if (CL_page > 1) {
+          CL_page--;
+          renderCodelistPage();
+        }
+      };
+
+      // Next page
+      next.onclick = () => {
+        const totalPages = Math.max(
+          1,
+          Math.ceil(CL_filtered.length / CL_pageSize)
+        );
+
+        if (CL_page < totalPages) {
+          CL_page++;
+          renderCodelistPage();
+        }
+      };
 
       CL_page = 1;
       renderCodelistPage();
     }
+
 
     function handleCodelistSearch(e) {
       const q = e.target.value.toLowerCase().trim();
@@ -775,7 +862,21 @@
 
 
     function selectCodelist(evt, codelistName) {
-      selectedCodelist = codelists.find(c => c.name === codelistName);
+      
+      if (!selectedSpec) {
+        alert('Please select a Specification first.');
+        return;
+      }
+
+      selectedCodelist = getCodelistForSpec(
+        codelistName,
+        selectedSpec
+      );
+
+      if (!selectedCodelist) {
+        alert('No matching codelist found for the selected Spec.');
+        return;
+      }
 
       document.querySelectorAll('.codelist-card').forEach(card => card.classList.remove('selected'));
       const card = evt.currentTarget || evt.target.closest('.codelist-card');
@@ -880,7 +981,7 @@
       document.getElementById('creation-section').style.display = 'block';
       const content = document.getElementById('creation-content');
       content.innerHTML = `
-    <h3>Selected Codelist: ${selectedCodelist.name}</h3>
+    <h3>Selected Codelist: ${selectedCodelist.name} (${selectedSpec}-Spec)</h3>
     <p style="color:#718096;margin-bottom:2rem;">This codelist contains ${selectedCodelist.codes.length} existing codes.</p>
 
     <div style="margin-bottom:2rem;">
@@ -1101,10 +1202,16 @@
 
       const currentName = selectedCodelist ? selectedCodelist.name : '';
       const allMatches = codelists
-        .filter(cl => cl.name !== currentName && cl.name.toLowerCase().includes(q))
+        .map(cl => getCodelistForSpec(cl.name, selectedSpec))
+        .filter(cl =>
+          cl &&
+          cl.name !== currentName &&
+          cl.name.toLowerCase().includes(q)
+        )
         .map(cl => {
           const alreadyHas = cl.codes.some(ec =>
-            pick(ec, 'Code_Value', 'CODE_Value', 'CODE_VALUE', 'Code', 'CODE').toUpperCase() === code.toUpperCase()
+            pick(ec, 'Code_Value', 'CODE_Value', 'CODE_VALUE',
+              'Code', 'CODE').toUpperCase() === code.toUpperCase()
           );
           return { cl, alreadyHas };
         });
@@ -1156,8 +1263,22 @@
         return;
       }
 
-      const targetCL = codelists.find(cl => cl.name === targetName);
-      if (!targetCL) return;
+      const targetCL = getCodelistForSpec(
+        targetName,
+        selectedSpec
+      );
+
+      if (!targetCL) {
+      const msg = document.getElementById(
+        'picker-msg-' + pickerId
+      );
+
+      if (msg) {
+        msg.textContent =
+          'Please select a valid target codelist for the selected Spec.';
+      }
+      return;
+    }
 
       const alreadyHas = targetCL.codes.some(ec =>
         pick(ec, 'Code_Value', 'CODE_Value', 'CODE_VALUE', 'Code', 'CODE').toUpperCase() === code.toUpperCase()
@@ -1169,7 +1290,11 @@
       }
 
       selectedCodelist = targetCL;
-      selectedNewCode = { code, description: desc, _spec: spec };
+      selectedNewCode = {
+        code,
+        description: desc,
+        _spec: selectedSpec
+      };
 
       const panel = document.getElementById(pickerId);
       if (panel) { panel.style.display = 'none'; panel.innerHTML = ''; }
@@ -1178,6 +1303,7 @@
       if (h3) h3.textContent = `Selected Codelist: ${targetName}`;
 
       addNewCodeToCodelist({ skipUserInfo: true });
+      showCodeCreation();
     };
 
     function showAutoCodeCreation() {
@@ -1485,12 +1611,7 @@
         return;
       }
 
-      const defaultSpecForCodelist =
-        pick(
-          selectedCodelist.codes.find(r => pick(r, 'Spec', 'SPEC')) || {},
-          'Spec',
-          'SPEC'
-        ) || (selectedCodelist.specs && selectedCodelist.specs[0]) || '';
+      const defaultSpecForCodelist = selectedSpec;
 
       const newCodeEntry = {
         'Spec': defaultSpecForCodelist,
@@ -1511,6 +1632,13 @@
       }
 
       selectedCodelist.codes.push(newCodeEntry);
+      const masterCodelist = codelists.find(
+        c => c.name === selectedCodelist.name
+      );
+
+      if (masterCodelist) {
+        masterCodelist.codes.push(newCodeEntry);
+      }
       sessionChanges.push({
         type: 'added',
         code: newCodeEntry.Code_Value,
@@ -2129,6 +2257,16 @@ Please Note: This is an automated notification from the A-SPEC Code Dashboard.`;
      *  Tier 4   Fuzzy / close match     (query ≥ 4 chars, only when 1-3 empty)
      *  Tier 5   Nothing found → encourage creation
      * ──────────────────────────────────────────────────────────────────────── */
+     function searchRowKey(cl, row) {
+      return [
+        cl.name,
+        pick(row, 'Spec', 'SPEC'),
+        pick(row, 'Code_Value', 'CODE_Value', 'CODE_VALUE', 'Code', 'CODE'),
+        pick(row, 'Description', 'DESCRIPTION'),
+        pick(row, 'Spec_Coverage', 'SPEC_COVERAGE', 'Spec Coverage')
+      ].map(value => String(value).trim().toUpperCase()).join('|');
+    }
+
     function handleCodeSearch(e) {
       const raw = e.target.value.trim();
       const qu = raw.toUpperCase();
@@ -2146,7 +2284,13 @@ Please Note: This is an automated notification from the A-SPEC Code Dashboard.`;
         );
         const actionHtml = `
       <div style="margin-top:.5rem;display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;">
-        <span style="font-size:.85rem;color:#4a5568;">From: <b>${item.codelistName}</b></span>
+        <span style="font-size:.85rem;color:#4a5568;">
+          From: <b>${escapeEmailText(item.codelistName)}</b>
+          | Spec: <b>${escapeEmailText(item.spec || 'N/A')}</b>
+          ${item.specCoverage
+            ? `| Coverage: <b>${escapeEmailText(item.specCoverage)}</b>`
+            : ''}
+        </span>
         ${alreadyInTarget ? `<span style="font-size:.85rem;color:#276749;background:#f0fff4;padding:.2rem .5rem;border-radius:4px;border:1px solid #9ae6b4;">✓ Already in this codelist</span>` : ''}
         <button onclick="showCopyPicker('${pickerId}','${ec}','${ed}','${es}','${ef}')"
           style="padding:.3rem .85rem;background:#667eea;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:.85rem;">
@@ -2170,12 +2314,13 @@ Please Note: This is an automated notification from the A-SPEC Code Dashboard.`;
       codelists.forEach(cl => {
         cl.codes.forEach(row => {
           const cv = pick(row, 'Code_Value', 'CODE_Value', 'CODE_VALUE', 'Code', 'CODE');
-          if (cv.toUpperCase() === qu && !seenExact.has(cv.toUpperCase())) {
-            seenExact.add(cv.toUpperCase());
+          if (cv.toUpperCase() === qu && !seenExact.has(searchRowKey(cl, row))) {
+            seenExact.add(searchRowKey(cl, row));
             exactItems.push({
               codelistName: cl.name, code: cv,
               description: pick(row, 'Description', 'DESCRIPTION') || '',
-              comment: pick(row, 'Comment', 'COMMENT', 'comment') || '', spec: pick(row, 'Spec', 'SPEC') || ''
+              comment: pick(row, 'Comment', 'COMMENT', 'comment') || '', spec: pick(row, 'Spec', 'SPEC') || '',
+              specCoverage: pick(row, 'Spec_Coverage', 'SPEC_COVERAGE', 'Spec Coverage') || ''
             });
           }
         });
@@ -2187,12 +2332,13 @@ Please Note: This is an automated notification from the A-SPEC Code Dashboard.`;
       codelists.forEach(cl => {
         cl.codes.forEach(row => {
           const cv = pick(row, 'Code_Value', 'CODE_Value', 'CODE_VALUE', 'Code', 'CODE');
-          if (cv.toUpperCase().startsWith(qu) && !seenStarts.has(cv.toUpperCase())) {
-            seenStarts.add(cv.toUpperCase());
+          if (cv.toUpperCase().startsWith(qu) && !seenStarts.has(searchRowKey(cl, row))) {
+            seenStarts.add(searchRowKey(cl, row));
             startsItems.push({
               codelistName: cl.name, code: cv,
               description: pick(row, 'Description', 'DESCRIPTION') || '',
-              comment: pick(row, 'Comment', 'COMMENT', 'comment') || '', spec: pick(row, 'Spec', 'SPEC') || ''
+              comment: pick(row, 'Comment', 'COMMENT', 'comment') || '', spec: pick(row, 'Spec', 'SPEC') || '',
+              specCoverage: pick(row, 'Spec_Coverage', 'SPEC_COVERAGE', 'Spec Coverage') || ''
             });
           }
         });
@@ -2207,12 +2353,13 @@ Please Note: This is an automated notification from the A-SPEC Code Dashboard.`;
           cl.codes.forEach(row => {
             const cv = pick(row, 'Code_Value', 'CODE_Value', 'CODE_VALUE', 'Code', 'CODE');
             const desc = pick(row, 'Description', 'DESCRIPTION') || '';
-            if (seenDesc.has(cv.toUpperCase())) return;
+            if (seenDesc.has(searchRowKey(cl, row))) return;
             if (desc.toLowerCase().startsWith(ql)) {
-              seenDesc.add(cv.toUpperCase());
+              seenDesc.add(searchRowKey(cl, row));
               descStartsItems.push({
                 codelistName: cl.name, code: cv, description: desc,
-                comment: pick(row, 'Comment', 'COMMENT', 'comment') || '', spec: pick(row, 'Spec', 'SPEC') || ''
+                comment: pick(row, 'Comment', 'COMMENT', 'comment') || '', spec: pick(row, 'Spec', 'SPEC') || '',
+                specCoverage: pick(row, 'Spec_Coverage', 'SPEC_COVERAGE', 'Spec Coverage') || ''
               });
             }
           });
@@ -2222,12 +2369,13 @@ Please Note: This is an automated notification from the A-SPEC Code Dashboard.`;
           cl.codes.forEach(row => {
             const cv = pick(row, 'Code_Value', 'CODE_Value', 'CODE_VALUE', 'Code', 'CODE');
             const desc = pick(row, 'Description', 'DESCRIPTION') || '';
-            if (seenContains.has(cv.toUpperCase())) return;
+            if (seenContains.has(searchRowKey(cl, row))) return;
             if (desc.toLowerCase().includes(ql)) {
-              seenContains.add(cv.toUpperCase());
+              seenContains.add(searchRowKey(cl, row));
               descContainsItems.push({
                 codelistName: cl.name, code: cv, description: desc,
-                comment: pick(row, 'Comment', 'COMMENT', 'comment') || '', spec: pick(row, 'Spec', 'SPEC') || ''
+                comment: pick(row, 'Comment', 'COMMENT', 'comment') || '', spec: pick(row, 'Spec', 'SPEC') || '',
+                specCoverage: pick(row, 'Spec_Coverage', 'SPEC_COVERAGE', 'Spec Coverage') || ''
               });
             }
           });
@@ -2291,15 +2439,17 @@ Please Note: This is an automated notification from the A-SPEC Code Dashboard.`;
           cl.codes.forEach(row => {
             const cv = pick(row, 'Code_Value', 'CODE_Value', 'CODE_VALUE', 'Code', 'CODE');
             const desc = pick(row, 'Description', 'DESCRIPTION') || '';
-            if (!cv || seenFuzzy.has(cv.toUpperCase())) return;
+            if (!cv || seenFuzzy.has(searchRowKey(cl, row))) return;
             const sDesc = desc.length > 3 ? fuzzyScore(raw, desc) : 0;
             const sCode = cv.length >= 3 ? fuzzyScore(raw, cv) : 0;
             const best = Math.max(sDesc, sCode);
             if (best >= FUZZY_THRESHOLD) {
-              seenFuzzy.add(cv.toUpperCase());
+              seenFuzzy.add(searchRowKey(cl, row));
               fuzzyItems.push({
                 codelistName: cl.name, code: cv, description: desc,
-                comment: pick(row, 'Comment', 'COMMENT', 'comment') || '', spec: pick(row, 'Spec', 'SPEC') || '', score: best
+                comment: pick(row, 'Comment', 'COMMENT', 'comment') || '', spec: pick(row, 'Spec', 'SPEC') || '', 
+                specCoverage: pick(row, 'Spec_Coverage', 'SPEC_COVERAGE', 'Spec Coverage') || '',
+                score: best
               });
             }
           });
