@@ -463,9 +463,9 @@
         style="display:block;color:#2d3748;font-weight:600;margin-bottom:.5rem;">
         Select Specification:
       </label>
-      <select id="spec-filter" required
+      <select id="spec-filter"
         style="width:100%;padding:.7rem;border:1px solid #cbd5e0;border-radius:6px;color:#2d3748;background:white;">
-        <option value="">-- Select a Spec --</option>
+        <option value="">All Specs</option>
       </select>
       </div>
       <input type="text" class="search-input" id="codelist-search"
@@ -646,29 +646,32 @@
       };
     }
 
-    function updateSpecSelection() {
-      const select = document.getElementById('spec-filter');
-      selectedSpec = select.value;
+      function updateSpecSelection() {
+        const select = document.getElementById('spec-filter');
+        selectedSpec = select.value;
 
-      selectedCodelist = null;
-      selectedNewCode = null;
+        selectedCodelist = null;
+        selectedExistingCode = null;
+        selectedNewCode = null;
 
-      const creation = document.getElementById('creation-section');
-      creation.style.display = 'none';
+        const creation = document.getElementById('creation-section');
+        creation.style.display = 'none';
 
-      const search = document.getElementById('codelist-search');
-      search.value = '';
+        const search = document.getElementById('codelist-search');
+        search.value = '';
 
-      CL_all = selectedSpec
-        ? codelists
-            .map(c => getCodelistForSpec(c.name, selectedSpec))
-            .filter(Boolean)
-        : [];
+        // All Specs: show all codelists.
+        // Specific Spec: show only matching codelists.
+        CL_all = selectedSpec
+          ? codelists
+              .map(c => getCodelistForSpec(c.name, selectedSpec))
+              .filter(Boolean)
+          : codelists.slice();
 
-      CL_filtered = CL_all.slice();
-      CL_page = 1;
-      renderCodelistPage();
-    }
+        CL_filtered = CL_all.slice();
+        CL_page = 1;
+        renderCodelistPage();
+      }
     let selectedCodelist = null;
     let selectedExistingCode = null;
     let selectedNewCode = null;
@@ -753,20 +756,22 @@
       )].sort();
 
       specSelect.innerHTML =
-        '<option value="">-- Select a Spec --</option>' +
+        '<option value="">All Specs</option>' +
         availableSpecs.map(spec =>
           `<option value="${spec}">${spec}-Spec</option>`
         ).join('');
 
+      specSelect.value = '';
       specSelect.onchange = updateSpecSelection;
 
       selectedSpec = '';
-      CL_all = [];
-      CL_filtered = [];
+
+      // Default to all codelists.
+      CL_all = codelists.slice();
+      CL_filtered = CL_all.slice();
 
       const searchInput = document.getElementById('codelist-search');
-
-      // Replace existing handler instead of adding another one
+      searchInput.value = '';
       searchInput.oninput = handleCodelistSearch;
 
       const ps = document.getElementById('codelist-page-size');
@@ -775,14 +780,12 @@
 
       CL_pageSize = parseInt(ps.value, 10) || 24;
 
-      // Rows per page
       ps.onchange = () => {
         CL_pageSize = parseInt(ps.value, 10) || 24;
         CL_page = 1;
         renderCodelistPage();
       };
 
-      // Previous page
       prev.onclick = () => {
         if (CL_page > 1) {
           CL_page--;
@@ -790,7 +793,6 @@
         }
       };
 
-      // Next page
       next.onclick = () => {
         const totalPages = Math.max(
           1,
@@ -806,7 +808,6 @@
       CL_page = 1;
       renderCodelistPage();
     }
-
 
     function handleCodelistSearch(e) {
       const q = e.target.value.toLowerCase().trim();
@@ -860,35 +861,45 @@
   `).join('');
     }
 
-
     function selectCodelist(evt, codelistName) {
-      
-      if (!selectedSpec) {
-        alert('Please select a Specification first.');
-        return;
+      if (selectedSpec) {
+        // Show codes for the selected Spec only.
+        selectedCodelist = getCodelistForSpec(
+          codelistName,
+          selectedSpec
+        );
+      } else {
+        // All Specs: allow browsing all existing codes.
+        selectedCodelist = codelists.find(
+          c => c.name === codelistName
+        );
       }
-
-      selectedCodelist = getCodelistForSpec(
-        codelistName,
-        selectedSpec
-      );
 
       if (!selectedCodelist) {
-        alert('No matching codelist found for the selected Spec.');
+        alert('No matching codelist found.');
         return;
       }
 
-      document.querySelectorAll('.codelist-card').forEach(card => card.classList.remove('selected'));
-      const card = evt.currentTarget || evt.target.closest('.codelist-card');
+      document.querySelectorAll('.codelist-card').forEach(
+        card => card.classList.remove('selected')
+      );
+
+      const card = evt.currentTarget ||
+        evt.target.closest('.codelist-card');
+
       if (card) card.classList.add('selected');
 
       setCurrentStep(3);
       showCodeCreation();
 
       const creation = document.getElementById('creation-section');
-      if (creation) { creation.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+      if (creation) {
+        creation.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }
     }
-
     /* -------------------- Existing + creation UI -------------------- */
     function displayExistingCodes() {
       // Count repeated code values within the selected codelist.
@@ -951,9 +962,17 @@
            onmouseout="this.style.backgroundColor='white'">
 
         <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:.25rem;">
+          
           <div style="font-weight:600;color:#2d3748;">
             ${codeVal}
           </div>
+
+          ${!selectedSpec ? `
+            <span style="font-size:.75rem;padding:.12rem .45rem;background:#edf2f7;color:#2d3748;border-radius:4px;">
+              Spec: ${escapeEmailText(pick(code, 'Spec', 'SPEC') || 'N/A')}
+            </span>
+          ` : ''}
+
 
           ${showCoverage ? `
             <span title="Spec Coverage"
@@ -981,7 +1000,19 @@
       document.getElementById('creation-section').style.display = 'block';
       const content = document.getElementById('creation-content');
       content.innerHTML = `
-    <h3>Selected Codelist: ${selectedCodelist.name} (${selectedSpec}-Spec)</h3>
+    
+      <h3>
+        Selected Codelist: ${selectedCodelist.name}
+        (${selectedSpec ? selectedSpec + '-Spec' : 'All Specs'})
+      </h3>
+
+      ${!selectedSpec ? `
+        <p style="color:#92400e;background:#fffbeb;padding:.75rem;border-radius:6px;margin:.75rem 0;">
+          You are viewing codes from all Specs.
+          Please select a specific Spec above before creating or copying a code.
+        </p>
+      ` : ''}
+
     <p style="color:#718096;margin-bottom:2rem;">This codelist contains ${selectedCodelist.codes.length} existing codes.</p>
 
     <div style="margin-bottom:2rem;">
@@ -1103,6 +1134,11 @@
 
     // ── Copy picker: current codelist button + mini searchable codelist list ─────
     window.showCopyPicker = function (pickerId, code, desc, spec, sourceCodelistName) {
+          if (!selectedSpec) {
+      alert('Please select a target Spec before copying a code.');
+      document.getElementById('spec-filter').focus();
+      return;
+    }
       setCurrentStep(4);
       // Close any other open pickers first
       document.querySelectorAll('.copy-picker-panel').forEach(p => {
@@ -1307,12 +1343,22 @@
     };
 
     function showAutoCodeCreation() {
+          if (!selectedSpec) {
+      alert('Please select a specific Spec before creating a code.');
+      document.getElementById('spec-filter').focus();
+      return;
+    }
       setCurrentStep(4);
       document.getElementById('create-auto-section').style.display = 'block';
       document.getElementById('create-manual-section').style.display = 'none';
       document.getElementById('new-code-description').focus();
     }
     function showManualCodeCreation() {
+          if (!selectedSpec) {
+      alert('Please select a specific Spec before creating a code.');
+      document.getElementById('spec-filter').focus();
+      return;
+    }
       setCurrentStep(4);
       document.getElementById('create-manual-section').style.display = 'block';
       document.getElementById('create-auto-section').style.display = 'none';
@@ -1584,6 +1630,11 @@
     /* -------------------- Add new code -------------------- */
 
     function addNewCodeToCodelist(options = {}) {
+          if (!selectedSpec || !selectedCodelist ||
+        !getCodelistForSpec(selectedCodelist.name, selectedSpec)) {
+      alert('Please select a valid target Spec and Codelist before adding a code.');
+      return;
+    }
       const userNameEl = document.getElementById('user-name');
       const userOrganisationEl = document.getElementById('user-organisation');
       const userCommentsEl = document.getElementById('user-comments');
@@ -2493,6 +2544,11 @@ Please Note: This is an automated notification from the A-SPEC Code Dashboard.`;
 
 
     function createNewWithSearchTerm(term) {
+          if (!selectedSpec) {
+      alert('Please select a specific Spec before creating a code.');
+      document.getElementById('spec-filter').focus();
+      return;
+    }
       showAutoCodeCreation();
       document.getElementById('new-code-description').value = term;
       generateCodeSuggestions();
