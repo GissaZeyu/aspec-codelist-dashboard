@@ -374,6 +374,18 @@
     .target-spec-destination { margin-top:13px; color:#475569; font-size:.92rem; line-height:1.5; }
     .back-to-codelists { display:inline-flex; align-items:center; gap:7px; padding:9px 15px; border:1px solid #667eea; background:#fff; color:#4f46e5; cursor:pointer; border-radius:7px; font-weight:600; font-size:.93rem; }
     .back-to-codelists:hover { background:#eef2ff; }
+    /* Optional supporting files: retain the original V4 visual theme. */
+    .supporting-images { margin-top:12px; padding:13px; border:1px solid #cbd5e0;
+      background:#f8fafc; border-radius:8px; color:#2d3748; text-align:left; }
+    .supporting-images h5 { font-size:.95rem; margin-bottom:5px; }
+    .supporting-image-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:11px; }
+    .supporting-image-slot { border:1px solid #d9e2ef; border-radius:7px; padding:10px; background:#fff; min-width:0; }
+    .supporting-image-slot label { display:block; margin-bottom:6px; font-weight:600; font-size:.87rem; }
+    .supporting-image-slot input { width:100%; max-width:100%; font-size:.83rem; }
+    .supporting-image-preview { display:flex; gap:9px; align-items:center; margin-top:8px; font-size:.78rem; overflow-wrap:anywhere; }
+    .supporting-image-preview img { width:76px; height:76px; object-fit:contain; background:#fff; border:1px solid #e2e8f0; border-radius:5px; }
+    .supporting-image-remove { background:#fff; border:1px solid #cbd5e0; border-radius:5px; padding:3px 7px; cursor:pointer; }
+    @media(max-width:580px) {.supporting-image-grid { grid-template-columns:1fr; }}
   </style>
 </head>
 
@@ -618,7 +630,7 @@
       return btoa(s);
     }
 
-    async function sendEmailViaBackend({ to = EMAIL_TO, subject, htmlBody, excelBlob = null, filename }) {
+    async function sendEmailViaBackend({ to = EMAIL_TO, subject, htmlBody, excelBlob = null, filename, imageAttachments = [] }) {
       const payload = {
         to,
         from: EMAIL_FROM,
@@ -631,6 +643,10 @@
         payload.filename = filename;
       }
 
+      if (imageAttachments.length) {
+        // Keep the existing Excel attachment field intact; images use an additive array.
+        payload.imageAttachments = imageAttachments.map(({filename, type, content}) => ({filename,type,content}));
+      }
       const resp = await fetch(EMAIL_BACKEND_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -773,6 +789,126 @@
     let selectedExistingCode = null;
     let selectedNewCode = null;
     let sessionChanges = [];
+    // Image files are held only in this browser session. One pair per logical
+    // proposal (groupId), shared by all Spec rows of that proposal.
+    const proposalImages = new Map();
+    const MAX_IMAGE_BYTES = 1536 * 1024; // 1.5 MiB per image
+    const MAX_TOTAL_IMAGE_BYTES = 3 * 1024 * 1024; // all proposals combined
+    const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+
+    function proposalImageKey(change) {
+      return String(change.groupId || `single-${sessionChanges.indexOf(change)}`);
+    }
+    function getProposalImages(key) {
+      return proposalImages.get(key) || {};
+    }
+    function getImageByteTotal(excludeKey = '', excludeKind = '') {
+      let sum = 0;
+      for (const [key, group] of proposalImages) {
+        for (const kind of ['photo', 'diagram']) {
+          if (key === excludeKey && kind === excludeKind) continue;
+          if (group[kind]?.file) sum += group[kind].file.size;
+        }
+      }
+      return sum;
+    }
+    function safeAttachmentPart(s, max = 42) {
+      return String(s || '').replace(/[^a-zA-Z0-9_-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, max) || 'unknown';
+    }
+    function displayImageSlot(key, kind) {
+      const slot = document.querySelector(`[data-image-slot="${key}-${kind}"]`);
+      if (!slot) return;
+      const fileState = getProposalImages(key)[kind];
+      const details = slot.querySelector('.supporting-image-preview');
+      if (!details) return;
+      details.replaceChildren();
+      if (!fileState) return;
+      const img = document.createElement('img');
+      img.src = fileState.url;
+      img.alt = kind === 'photo' ? 'Uploaded reference photo preview' : 'Uploaded diagram preview';
+      const label = document.createElement('span');
+      label.textContent = `${fileState.file.name} (${(fileState.file.size / 1024).toFixed(0)} KB)`;
+      const btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'supporting-image-remove'; btn.textContent = 'Remove';
+      btn.onclick = () => removeProposalImage(key, kind);
+      details.append(img, label, btn);
+    }
+    function removeProposalImage(key, kind) {
+      const group = getProposalImages(key);
+      if (group[kind]?.url) URL.revokeObjectURL(group[kind].url);
+      delete group[kind];
+      if (!group.photo && !group.diagram) proposalImages.delete(key);
+      const slot = document.querySelector(`[data-image-slot="${key}-${kind}"]`);
+      if (slot) {
+        const input = slot.querySelector('input[type="file"]');
+        if (input) input.value = '';
+      }
+      displayImageSlot(key, kind);
+    }
+    function selectProposalImage(input, key, kind) {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      const reject = (message) => {
+        alert(message); input.value = ''; return;
+      };
+      if (!ALLOWED_IMAGE_TYPES.has(file.type)) return reject('Please use a JPG, PNG or WebP image. SVG and other files are not accepted.');
+      if (file.size === 0 || file.size > MAX_IMAGE_BYTES) return reject('Each image must be no larger than 1.5 MB. Please resize or compress it first.');
+      if (getImageByteTotal(key, kind) + file.size > MAX_TOTAL_IMAGE_BYTES) return reject('Total supporting images across this submission must be within 3 MB. Please choose smaller images or remove another attachment.');
+      // MIME is also verified using image signatures by the Netlify backend.
+      const group = getProposalImages(key);
+      if (group[kind]?.url) URL.revokeObjectURL(group[kind].url);
+      group[kind] = {file, url: URL.createObjectURL(file)};
+      proposalImages.set(key, group);
+      displayImageSlot(key, kind);
+    }
+    function imageUploaderForGroup(key, change) {
+      const specs = sessionChanges.filter(ch => proposalImageKey(ch) === key).map(ch => ch.spec + '-Spec');
+      return `<div class="supporting-images">
+        <h5>📷 Supporting Images <span style="font-weight:normal;color:#718096;">(Optional)</span></h5>
+        <p style="font-size:.83rem;color:#4a5568;line-height:1.5;">Add a reference photo and/or technical diagram for <b>${escapeEmailText(change.code)}</b> (${escapeEmailText(specs.join(', '))}). You can leave both blank. Images will be sent to GISSA for review, not published automatically.</p>
+        <div class="supporting-image-grid">
+          ${[['photo', 'Reference Photo', 'A photo showing the actual asset or item.'], ['diagram', 'Technical Diagram', 'A technical drawing, schematic or diagram illustrating the asset or item.']].map(([kind,title,hint]) => `
+          <div class="supporting-image-slot" data-image-slot="${key}-${kind}">
+            <label>${title}</label><div style="color:#718096;font-size:.78rem;margin-bottom:7px;">${hint}</div>
+            <input type="file" accept="image/jpeg,image/png,image/webp" aria-label="${title}" onchange="selectProposalImage(this,'${key}','${kind}')">
+            <div class="supporting-image-preview"></div>
+          </div>`).join('')}
+        </div><p style="font-size:.78rem;color:#718096;margin-top:8px;">JPG, PNG or WebP · Max 1.5 MB each · Max 3 MB across this submission. Images are optional.</p>
+      </div>`;
+    }
+    async function getSubmissionImageAttachments() {
+      const attachments = [];
+      const seen = new Set();
+      for (const ch of sessionChanges) {
+        const key = proposalImageKey(ch);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const group = getProposalImages(key);
+        for (const kind of ['photo','diagram']) {
+          if (!group[kind]?.file) continue;
+          const f = group[kind].file;
+          if (!ALLOWED_IMAGE_TYPES.has(f.type) || f.size > MAX_IMAGE_BYTES) throw new Error('Invalid supporting image: ' + f.name);
+          const ext = f.type === 'image/jpeg' ? 'jpg' : f.type === 'image/png' ? 'png' : 'webp';
+          const filename = `${safeAttachmentPart(ch.codelist)}__${safeAttachmentPart(ch.code,12)}__${kind}__${safeAttachmentPart(key,24)}.${ext}`;
+          attachments.push({filename, type:f.type, content:await blobToBase64(f), kind, code:ch.code, codelist:ch.codelist, specs:sessionChanges.filter(row => proposalImageKey(row) === key).map(row => row.spec)});
+        }
+      }
+      return attachments;
+    }
+    function supportingImageSummary() {
+      const lines=[]; const seen=new Set();
+      for (const ch of sessionChanges) {
+        const key=proposalImageKey(ch);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const group=getProposalImages(key);
+        const specs=sessionChanges.filter(x=>proposalImageKey(x)===key).map(x=>x.spec+'-Spec').join(', ');
+        for (const [kind,label] of [['photo','Reference Photo'],['diagram','Technical Diagram']]) {
+          if (group[kind]?.file) lines.push(`* ${label}: ${escapeEmailText(group[kind].file.name)} — ${escapeEmailText(ch.code)} / ${escapeEmailText(ch.codelist)} (${escapeEmailText(specs)})`);
+        }
+      }
+      return lines;
+    }
     let lastUserName = '', lastUserEmail = '', lastUserOrganisation = '', lastUserWantsConfirm = false;
     let currentWorkflowStep = 1;
 
@@ -1866,7 +2002,7 @@
       const modal = document.createElement('div');
       modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:10000;display:flex;justify-content:center;align-items:center;';
       const content = document.createElement('div');
-      content.style.cssText = 'background:#fff;padding:2rem;border-radius:12px;max-width:600px;box-shadow:0 20px 40px rgba(0,0,0,.3);text-align:center;';
+      content.style.cssText = 'background:#fff;padding:2rem;border-radius:12px;max-width:750px;width:94vw;max-height:88vh;overflow-y:auto;box-shadow:0 20px 40px rgba(0,0,0,.3);text-align:center;';
       content.innerHTML = `
     <h2 style="color:#2d3748;margin-bottom:1.5rem;"><span style="background:#e0eaff;border-radius:6px;padding:.15em .45em;font-size:1.2em;margin-right:.5em;">🔄</span>Continue Making Changes?</h2>
     <div style="background:#f7fafc;border-radius:8px;padding:1rem;margin-bottom:1.5rem;text-align:left;">
@@ -1884,6 +2020,7 @@
               <button onclick="editSessionChange(${idx})" style="padding:.25rem .6rem;background:#667eea;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:.8rem;white-space:nowrap;flex-shrink:0;">✏️ Edit</button>
             </div>
             <div id="modal-edit-${idx}" style="display:none;margin-top:.6rem;"></div>
+            ${sessionChanges.findIndex(x => proposalImageKey(x) === proposalImageKey(ch)) === idx ? imageUploaderForGroup(proposalImageKey(ch), ch) : ''}
           </div>`).join('')}
     </div>
     <p style="color:#4a5568;margin-bottom:2rem;">Do you want to make more changes before sending the email notification?</p>
@@ -1895,6 +2032,11 @@
       modal.className = 'changes-modal';
       modal.appendChild(content);
       document.body.appendChild(modal);
+      // Rehydrate image thumbnails after returning from Make More Changes / Back.
+      sessionChanges.forEach(ch => {
+        const key=proposalImageKey(ch);
+        for (const kind of ['photo','diagram']) displayImageSlot(key,kind);
+      });
       window.continueChanges = () => { modal.remove(); setCurrentStep(3); };
       window.finalizeAndSendEmail = () => { modal.remove(); setCurrentStep(5); validateUserInfoAndSend(); };
     }
@@ -2014,6 +2156,9 @@ There has been a new code created by an A-Speccer. Here's what's changed:
 
 **New Code/s Added**
 ${newTerms}
+
+**Supporting Images (optional)**
+${supportingImageSummary().join('\n') || 'No images provided.'}
 
 **Quick Stats**
 * **Total codes in database:** ${getTotalTermsCount()}
@@ -2154,7 +2299,8 @@ Please Note: This is an automated notification from the A-SPEC Code Dashboard.`;
     <div style="margin-bottom:1.5rem;padding:1rem;background:#f7fafc;border-radius:8px;color:#000;">
       <strong>To:</strong> info@gissa.com.au<br>
       <strong>Subject:</strong> ${subject}<br>
-      <strong>Attachment:</strong> 📎 ${filename}
+      <strong>Attachment:</strong> 📎 ${filename}<br>
+      <strong>Supporting images:</strong> ${supportingImageSummary().length} file(s)${supportingImageSummary().length ? '<br>' + supportingImageSummary().join('<br>') : ' (none)'}
     </div>
     <div style="background:#f9f9f9;border:1px solid #e2e8f0;border-radius:8px;padding:1.5rem;margin-bottom:2rem;white-space:pre-line;font-family:'Courier New',monospace;font-size:.9rem;line-height:1.4;color:#000;">${body}</div>
     <div style="margin-bottom:1.5rem;padding:1rem;background:#ebf8ff;border-radius:8px;color:#000;">
@@ -2183,7 +2329,8 @@ Please Note: This is an automated notification from the A-SPEC Code Dashboard.`;
           sendBtn.textContent = "Sending...";
 
           // 1. Send admin notification to info@gissa.com.au with attachment
-          await sendEmailViaBackend({ subject, htmlBody: body, excelBlob, filename });
+          const imageAttachments = await getSubmissionImageAttachments();
+          await sendEmailViaBackend({ subject, htmlBody: body, excelBlob, filename, imageAttachments });
 
           // 2. Send confirmation to requester
           if (userEmail) {
@@ -2198,6 +2345,9 @@ Organisation: ${escapeEmailText(userOrganisation || 'Not provided')}
 
 Quick summary (${changes ? changes.length : 1} change${(changes && changes.length !== 1) ? 's' : ''}):
 ${formatEmailChangeSummary(changes || [], '•')}
+
+Supporting images provided:
+${supportingImageSummary().join('\n') || 'None'}
 
 What's Next?
 The A-SPEC team will review these changes and update any documentation or processes that reference these codes.
@@ -2259,6 +2409,10 @@ Please Note: This is an automated notification from the A-SPEC Code Dashboard.`;
     }
 
     function resetSession(deep = false) {
+      for (const group of proposalImages.values()) {
+        for (const kind of ['photo','diagram']) if (group[kind]?.url) URL.revokeObjectURL(group[kind].url);
+      }
+      proposalImages.clear();
       sessionChanges = []; selectedCodelist = null; selectedExistingCode = null; selectedNewCode = null; targetSpec = ''; targetSpecs = []; 
 
       const ids = ['codelist-section', 'creation-section', 'codelist-search', 'code-search',
